@@ -1,0 +1,69 @@
+options:
+  docker: true
+
+pipelines:
+  default:
+    - step:
+        caches:
+          - docker
+        script:
+          - export APP_IMAGE=keboola-component
+          - docker build . --tag=$APP_IMAGE
+          - docker images
+          - docker -v
+          - docker run $APP_IMAGE flake8 /code/ --config=/code/flake8.cfg
+          - echo "Running unit-tests..."
+          - docker run $APP_IMAGE python -m unittest discover
+          # push test image to ecr - uncomment for testing before deployment
+          - echo 'Pushing test image to repo. [tag=test]'
+          - export REPOSITORY=`docker run --rm -e KBC_DEVELOPERPORTAL_USERNAME -e KBC_DEVELOPERPORTAL_PASSWORD -e KBC_DEVELOPERPORTAL_URL quay.io/keboola/developer-portal-cli-v2:latest ecr:get-repository $KBC_DEVELOPERPORTAL_VENDOR $KBC_DEVELOPERPORTAL_APP`
+          - docker tag $APP_IMAGE:latest $REPOSITORY:test
+          - eval $(docker run --rm -e KBC_DEVELOPERPORTAL_USERNAME -e KBC_DEVELOPERPORTAL_PASSWORD -e KBC_DEVELOPERPORTAL_URL quay.io/keboola/developer-portal-cli-v2:latest ecr:get-login $KBC_DEVELOPERPORTAL_VENDOR $KBC_DEVELOPERPORTAL_APP)
+          - docker push $REPOSITORY:test
+
+
+  branches:
+    master:
+      - step:
+          caches:
+            - docker
+          script:
+            - export APP_IMAGE=keboola-component
+            - docker build . --tag=$APP_IMAGE
+            - docker images
+            - docker -v
+            - docker run $APP_IMAGE flake8 /code/ --config=/code/flake8.cfg
+            - echo "Running unit-tests..."
+            - docker run $APP_IMAGE python -m unittest discover
+            # push test image to ecr - uncomment for testing before deployment
+            - echo 'Pushing test image to repo. [tag=test]'
+            - export REPOSITORY=`docker run --rm -e KBC_DEVELOPERPORTAL_USERNAME -e KBC_DEVELOPERPORTAL_PASSWORD -e KBC_DEVELOPERPORTAL_URL quay.io/keboola/developer-portal-cli-v2:latest ecr:get-repository $KBC_DEVELOPERPORTAL_VENDOR $KBC_DEVELOPERPORTAL_APP`
+            - docker tag $APP_IMAGE:latest $REPOSITORY:test
+            - eval $(docker run --rm -e KBC_DEVELOPERPORTAL_USERNAME -e KBC_DEVELOPERPORTAL_PASSWORD -e KBC_DEVELOPERPORTAL_URL quay.io/keboola/developer-portal-cli-v2:latest ecr:get-login $KBC_DEVELOPERPORTAL_VENDOR $KBC_DEVELOPERPORTAL_APP)
+            - docker push $REPOSITORY:test
+            - chmod +x ./scripts/update_dev_portal_properties.sh
+            - ./scripts/update_dev_portal_properties.sh
+  tags:
+    '*':
+      - step:
+          deployment: production
+          script:
+            - export APP_IMAGE=keboola-component
+            - docker build . --tag=$APP_IMAGE
+            - docker images
+            - docker run $APP_IMAGE flake8 /code/ --config=/code/flake8.cfg
+            - echo "Running unit-tests..."
+            - docker run $APP_IMAGE python -m unittest discover
+            - echo "Preparing KBC test image"
+            - docker pull quay.io/keboola/developer-portal-cli-v2:latest
+            # push test image to ECR - uncomment when initialised
+            # - export REPOSITORY=`docker run --rm -e KBC_DEVELOPERPORTAL_USERNAME -e KBC_DEVELOPERPORTAL_PASSWORD -e KBC_DEVELOPERPORTAL_URL quay.io/keboola/developer-portal-cli-v2:latest ecr:get-repository $KBC_DEVELOPERPORTAL_VENDOR $KBC_DEVELOPERPORTAL_APP`
+            # - docker tag $APP_IMAGE:latest $REPOSITORY:test
+            # - eval $(docker run --rm -e KBC_DEVELOPERPORTAL_USERNAME -e KBC_DEVELOPERPORTAL_PASSWORD -e KBC_DEVELOPERPORTAL_URL quay.io/keboola/developer-portal-cli-v2:latest ecr:get-login $KBC_DEVELOPERPORTAL_VENDOR $KBC_DEVELOPERPORTAL_APP)
+            # - docker push $REPOSITORY:test
+            # - docker run --rm -e KBC_STORAGE_TOKEN quay.io/keboola/syrup-cli:latest run-job $KBC_DEVELOPERPORTAL_APP $BASE_KBC_CONFIG test
+            # - docker run --rm -e KBC_STORAGE_TOKEN quay.io/keboola/syrup-cli:latest run-job $KBC_DEVELOPERPORTAL_APP $KBC_CONFIG_1 test
+            - chmod +x ./scripts/update_dev_portal_properties.sh
+            - chmod +x ./deploy.sh
+            - ./scripts/update_dev_portal_properties.sh
+            - ./deploy.sh
