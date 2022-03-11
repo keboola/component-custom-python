@@ -1,17 +1,40 @@
 {
   "type": "object",
-  "title": "extractor configuration",
+  "title": "Test",
   "required": [
-    "print_hello"
+    "user_properties",
+    "code"
   ],
   "properties": {
-    "print_hello": {
-      "type": "boolean",
-      "title": "Print Hello"
+    "code": {
+      "type": "string",
+      "title": "Python Code",
+      "format": "editor",
+      "default": "from keboola.component import CommonInterface\nci = CommonInterface()\n# access user parameters\nprint(ci.configuration.parameters)",
+      "options": {
+        "editor": {
+          "mode": "text/x-python",
+          "lineNumbers": true,
+          "input_height": "100px"
+        }
+      },
+      "propertyOrder": 10
     },
-    "debug": {
-      "type": "boolean",
-      "title": "Debug"
+    "user_properties": {
+      "type": "string",
+      "title": "User Parameters",
+      "format": "editor",
+      "default": {},
+      "options": {
+        "editor": {
+          "lint": true,
+          "mode": "application/json",
+          "lineNumbers": true,
+          "input_height": "100px"
+        }
+      },
+      "description": "User parameters accessible, the result will be injected in standard data/config.json parameters property as in any other component",
+      "propertyOrder": 1
     }
   }
 }

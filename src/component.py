@@ -2,9 +2,12 @@
 Template Component main class.
 
 """
-import csv
+import json
 import logging
-from datetime import datetime
+import os
+import runpy
+import sys
+from traceback import TracebackException
 
 from keboola.component.base import ComponentBase
 from keboola.component.exceptions import UserException
@@ -34,43 +37,101 @@ class Component(ComponentBase):
         super().__init__()
 
     def run(self):
+        parameters = self.configuration.parameters
+
+        script_path = os.path.join(self.data_folder_path, 'script.py')
+        self.prepare_script_file(script_path)
+
+        self._merge_user_parameters()
+
+        # install packages
+        self.install_packages(parameters.get('packages', []))
+
+        self.execute_script_file(script_path)
+
+    def prepare_script_file(self, destination_path: str):
+        script = self.configuration.parameters['code']
+        with open(destination_path, 'w+') as file:
+            logging.info('Processing script "%s"' % (self.script_excerpt(script)))
+            file.write(script)
+
+    def execute_script_file(self, file_path):
+        import traceback
+
+        # Change current working directory so that relative paths work
+        os.chdir(self.data_folder_path)
+        sys.path.append(self.data_folder_path)
+
+        try:
+            with open(file_path, 'r') as file:
+                script = file.read()
+            logging.info('Execute script "%s"' % (self.script_excerpt(script)))
+            file_globals = runpy.run_path(file_path)
+            logging.info('Script finished')
+        except Exception as err:
+            _, _, tb = sys.exc_info()
+            stack_len = len(traceback.extract_tb(tb)[4:])
+            # print(err, file=sys.stderr)
+
+            stack_trace_records = self._get_stack_trace_records(*sys.exc_info(), -stack_len, chain=True)
+            stack_cropped = "\n".join(stack_trace_records)
+
+            raise UserException(f'Script failed. {err}. Detail: {stack_cropped}') from err
+
+    @staticmethod
+    def _get_stack_trace_records(etype, value, tb, limit=None, chain=True):
+        stack_trace_records = []
+        for line in TracebackException(type(value), value, tb, limit=limit).format(chain=chain):
+            stack_trace_records.append(line)
+        return stack_trace_records
+
+    @staticmethod
+    def script_excerpt(script):
+        if len(script) > 1000:
+            return script[0: 500] + '\n...\n' + script[-500]
+        else:
+            return script
+
+    @staticmethod
+    def install_packages(packages):
+        import subprocess
+        import sys
+        for package in packages:
+            args = [
+                sys.executable,
+                '-m', 'pip', 'install',
+                '--disable-pip-version-check',
+                '--no-cache-dir',
+                '--no-warn-script-location',  # ignore error: installed in '/var/www/.local/bin' which is not on PATH.
+                '--force-reinstall',
+                package
+            ]
+            if subprocess.call(args) != 0:
+                raise UserException('Failed to install package: ' + package)
+
+    def _merge_user_parameters(self):
         """
-        Main execution code
+        Merges user paramters into config.json->parameters property. Rebuilds the physical config.json file
+        Returns:
+
         """
+        # remove code
+        config_data = self.configuration.config_data
 
-        # ####### EXAMPLE TO REMOVE
-        # check for missing configuration parameters
-        self.validate_configuration_parameters(REQUIRED_PARAMETERS)
-        self.validate_image_parameters(REQUIRED_IMAGE_PARS)
-        params = self.configuration.parameters
-        # Access parameters in data/config.json
-        if params.get(KEY_PRINT_HELLO):
-            logging.info("Hello World")
+        parameters = self.configuration.parameters
+        parameters.pop('code', {})
 
-        # get last state data/in/state.json from previous run
-        previous_state = self.get_state_file()
-        logging.info(previous_state.get('some_state_parameter'))
+        parameters = {**parameters,
+                      **parameters.get('user_parameters', {})}
 
-        # Create output table (Tabledefinition - just metadata)
-        table = self.create_out_table_definition('output.csv', incremental=True, primary_key=['timestamp'])
+        # pop user_params
+        parameters.pop('user_parameters', {})
 
-        # get file path of the table (data/out/tables/Features.csv)
-        out_table_path = table.full_path
-        logging.info(out_table_path)
-
-        # DO whatever and save into out_table_path
-        with open(table.full_path, mode='wt', encoding='utf-8', newline='') as out_file:
-            writer = csv.DictWriter(out_file, fieldnames=['timestamp'])
-            writer.writeheader()
-            writer.writerow({"timestamp": datetime.now().isoformat()})
-
-        # Save table manifest (output.csv.manifest) from the tabledefinition
-        self.write_manifest(table)
-
-        # Write new state - will be available next run
-        self.write_state_file({"some_state_parameter": "value"})
-
-        # ####### EXAMPLE TO REMOVE END
+        # build config data and overwrite for the user script
+        config_data.pop('parameters', {})
+        config_data['parameters'] = parameters
+        with open(os.path.join(self.data_folder_path, 'config.json'), 'w+') as inp:
+            json.dump(config_data, inp)
 
 
 """
@@ -82,7 +143,10 @@ if __name__ == "__main__":
         # this triggers the run method by default and is controlled by the configuration.action parameter
         comp.execute_action()
     except UserException as exc:
-        logging.exception(exc)
+        detail = ''
+        if len(exc.args) > 1:
+            detail = exc.args[1]
+        logging.exception(exc, extra={"full_message": detail})
         exit(1)
     except Exception as exc:
         logging.exception(exc)
