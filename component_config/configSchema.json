@@ -24,7 +24,9 @@
       "type": "string",
       "title": "User Parameters",
       "format": "editor",
-      "default": {},
+      "default": {
+        "debug": false
+      },
       "options": {
         "editor": {
           "lint": true,
