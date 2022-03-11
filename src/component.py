@@ -39,6 +39,7 @@ class Component(ComponentBase):
     def run(self):
         parameters = self.configuration.parameters
 
+        self._set_init_logging_handler()
         script_path = os.path.join(self.data_folder_path, 'script.py')
         self.prepare_script_file(script_path)
 
@@ -70,8 +71,6 @@ class Component(ComponentBase):
         except Exception as err:
             _, _, tb = sys.exc_info()
             stack_len = len(traceback.extract_tb(tb)[4:])
-            # print(err, file=sys.stderr)
-
             stack_trace_records = self._get_stack_trace_records(*sys.exc_info(), -stack_len, chain=True)
             stack_cropped = "\n".join(stack_trace_records)
 
@@ -113,6 +112,10 @@ class Component(ComponentBase):
             process.poll()
             if process.poll() != 0:
                 raise UserException('Failed to install package:  {package}. Log in event detail.', stderr)
+
+    def _set_init_logging_handler(self):
+        for h in logging.getLogger().handlers:
+            h.setFormatter(logging.Formatter('[Non-script message]: %(message)s'))
 
     def _merge_user_parameters(self):
         """
