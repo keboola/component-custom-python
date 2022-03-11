@@ -39,6 +39,7 @@ class Component(ComponentBase):
     def run(self):
         parameters = self.configuration.parameters
 
+        self._set_init_logging_handler()
         script_path = os.path.join(self.data_folder_path, 'script.py')
         self.prepare_script_file(script_path)
 
@@ -52,7 +53,6 @@ class Component(ComponentBase):
     def prepare_script_file(self, destination_path: str):
         script = self.configuration.parameters['code']
         with open(destination_path, 'w+') as file:
-            logging.info('Processing script "%s"' % (self.script_excerpt(script)))
             file.write(script)
 
     def execute_script_file(self, file_path):
@@ -71,8 +71,6 @@ class Component(ComponentBase):
         except Exception as err:
             _, _, tb = sys.exc_info()
             stack_len = len(traceback.extract_tb(tb)[4:])
-            # print(err, file=sys.stderr)
-
             stack_trace_records = self._get_stack_trace_records(*sys.exc_info(), -stack_len, chain=True)
             stack_cropped = "\n".join(stack_trace_records)
 
@@ -106,8 +104,20 @@ class Component(ComponentBase):
                 '--force-reinstall',
                 package
             ]
-            if subprocess.call(args) != 0:
-                raise UserException('Failed to install package: ' + package)
+            process = subprocess.Popen(args,
+                                       stdout=subprocess.PIPE,
+                                       stderr=subprocess.PIPE)
+            stdout, stderr = process.communicate()
+            logging.info(f'Installing package: {package}. Full log in detail.', extra={'full_message': stdout})
+            process.poll()
+            if process.poll() != 0:
+                raise UserException('Failed to install package:  {package}. Log in event detail.', stderr)
+            elif stderr:
+                logging.warning(stderr)
+
+    def _set_init_logging_handler(self):
+        for h in logging.getLogger().handlers:
+            h.setFormatter(logging.Formatter('[Non-script message]: %(message)s'))
 
     def _merge_user_parameters(self):
         """
@@ -116,20 +126,10 @@ class Component(ComponentBase):
 
         """
         # remove code
-        config_data = self.configuration.config_data
-
-        parameters = self.configuration.parameters
-        parameters.pop('code', {})
-
-        parameters = {**parameters,
-                      **parameters.get('user_parameters', {})}
-
-        # pop user_params
-        parameters.pop('user_parameters', {})
+        config_data = self.configuration.config_data.copy()
 
         # build config data and overwrite for the user script
-        config_data.pop('parameters', {})
-        config_data['parameters'] = parameters
+        config_data['parameters'] = self.configuration.parameters.get('user_properties', {})
         with open(os.path.join(self.data_folder_path, 'config.json'), 'w+') as inp:
             json.dump(config_data, inp)
 
