@@ -123,19 +123,10 @@ class Component(ComponentBase):
         # remove code
         config_data = self.configuration.config_data.copy()
 
-        parameters = self.configuration.parameters
-
-        logging.info(f"Merging user parameters. Original : {parameters}")
-        parameters.pop('code', {})
-
-        parameters = {**parameters,
-                      **parameters.get('user_parameters', {})}
-
-        # pop user_params
-        parameters.pop('user_parameters', {})
+        logging.info(f"Merging user parameters. Original : {self.configuration.parameters}")
 
         # build config data and overwrite for the user script
-        config_data['parameters'] = parameters
+        config_data['parameters'] = self.configuration.parameters.get('user_properties', {})
         logging.info(f"New : {config_data['parameters']} to path {os.path.join(self.data_folder_path, 'config.json')}")
         with open(os.path.join(self.data_folder_path, 'config.json'), 'w+') as inp:
             json.dump(config_data, inp)
