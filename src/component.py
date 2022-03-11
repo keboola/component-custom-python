@@ -52,7 +52,6 @@ class Component(ComponentBase):
     def prepare_script_file(self, destination_path: str):
         script = self.configuration.parameters['code']
         with open(destination_path, 'w+') as file:
-            logging.info('Processing script "%s"' % (self.script_excerpt(script)))
             file.write(script)
 
     def execute_script_file(self, file_path):
@@ -106,8 +105,14 @@ class Component(ComponentBase):
                 '--force-reinstall',
                 package
             ]
-            if subprocess.call(args) != 0:
-                raise UserException('Failed to install package: ' + package)
+            process = subprocess.Popen(args,
+                                       stdout=subprocess.PIPE,
+                                       stderr=subprocess.PIPE)
+            stdout, stderr = process.communicate()
+            logging.info(f'Installing package: {package}. Full log in detail.', extra={'full_message': stdout})
+            process.poll()
+            if process.poll() != 0:
+                raise UserException('Failed to install package:  {package}. Log in event detail.', stderr)
 
     def _merge_user_parameters(self):
         """

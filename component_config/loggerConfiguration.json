@@ -1,8 +1,8 @@
 {
   "verbosity": {
-    "100": "normal",
-    "200": "normal",
-    "250": "normal",
+    "100": "verbose",
+    "200": "verbose",
+    "250": "verbose",
     "300": "verbose",
     "400": "verbose",
     "500": "camouflage",
