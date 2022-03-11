@@ -121,9 +121,11 @@ class Component(ComponentBase):
 
         """
         # remove code
-        config_data = self.configuration.config_data
+        config_data = self.configuration.config_data.copy()
 
         parameters = self.configuration.parameters
+
+        logging.info(f"Merging user parameters. Original : {parameters}")
         parameters.pop('code', {})
 
         parameters = {**parameters,
@@ -133,8 +135,8 @@ class Component(ComponentBase):
         parameters.pop('user_parameters', {})
 
         # build config data and overwrite for the user script
-        config_data.pop('parameters', {})
         config_data['parameters'] = parameters
+        logging.info(f"New : {config_data['parameters']} to path {os.path.join(self.data_folder_path, 'config.json')}")
         with open(os.path.join(self.data_folder_path, 'config.json'), 'w+') as inp:
             json.dump(config_data, inp)
 
