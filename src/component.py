@@ -66,7 +66,7 @@ class Component(ComponentBase):
             with open(file_path, 'r') as file:
                 script = file.read()
             logging.info('Execute script "%s"' % (self.script_excerpt(script)))
-            file_globals = runpy.run_path(file_path)
+            runpy.run_path(file_path)
             logging.info('Script finished')
         except Exception as err:
             _, _, tb = sys.exc_info()
@@ -111,7 +111,7 @@ class Component(ComponentBase):
 
     def _merge_user_parameters(self):
         """
-        Merges user paramters into config.json->parameters property. Rebuilds the physical config.json file
+        INPLACE Merges user paramters into config.json->parameters property. Rebuilds the physical config.json file
         Returns:
 
         """
