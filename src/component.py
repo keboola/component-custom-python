@@ -112,6 +112,8 @@ class Component(ComponentBase):
             process.poll()
             if process.poll() != 0:
                 raise UserException('Failed to install package:  {package}. Log in event detail.', stderr)
+            elif stderr:
+                logging.warning(stderr)
 
     def _set_init_logging_handler(self):
         for h in logging.getLogger().handlers:
@@ -126,11 +128,8 @@ class Component(ComponentBase):
         # remove code
         config_data = self.configuration.config_data.copy()
 
-        logging.info(f"Merging user parameters. Original : {self.configuration.parameters}")
-
         # build config data and overwrite for the user script
         config_data['parameters'] = self.configuration.parameters.get('user_properties', {})
-        logging.info(f"New : {config_data['parameters']} to path {os.path.join(self.data_folder_path, 'config.json')}")
         with open(os.path.join(self.data_folder_path, 'config.json'), 'w+') as inp:
             json.dump(config_data, inp)
 
