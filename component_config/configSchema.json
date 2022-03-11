@@ -37,12 +37,6 @@
       },
       "description": "User parameters accessible, the result will be injected in standard data/config.json parameters property as in any other component",
       "propertyOrder": 1
-    },
-    "packages": {
-      "type": "object",
-      "options": {
-        "hidden": true
-      }
     }
   }
 }
