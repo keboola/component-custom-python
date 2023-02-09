@@ -1,9 +1,10 @@
 {
   "type": "object",
-  "title": "Test",
+  "title": "Configuration",
   "required": [
     "user_properties",
-    "code"
+    "code",
+    "[aclages
   ],
   "properties": {
     "code": {
@@ -20,8 +21,22 @@
       },
       "propertyOrder": 10
     },
+    "packages": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "title": "Python Packages",
+      "format": "select",
+      "options": {
+        "tags": true
+      },
+      "description": "Learn more about package installation and usage, and about the list of pre-installed packages in our <a href=\"https://help.keboola.com/transformations/\">documentation</a>",
+      "uniqueItems": true,
+      "propertyOrder": 1
+    },
     "user_properties": {
-      "type": "string",
+      "type": "object",
       "title": "User Parameters",
       "format": "editor",
       "default": {
