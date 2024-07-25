@@ -40,7 +40,7 @@ class Component(ComponentBase):
         parameters = self.configuration.parameters
 
         self._set_init_logging_handler()
-        logging.debug(sys.executable)
+        logging.info(sys.executable)
         script_path = os.path.join(self.data_folder_path, 'script.py')
         self.prepare_script_file(script_path)
 
@@ -112,7 +112,7 @@ class Component(ComponentBase):
             logging.info(f'Installing package: {package}. Full log in detail.', extra={'full_message': stdout})
             process.poll()
             if process.poll() != 0:
-                raise UserException('Failed to install package:  {package}. Log in event detail.', stderr)
+                raise UserException(f'Failed to install package:  {package}. Log in event detail.', stderr)
             elif stderr:
                 logging.warning(stderr)
 
