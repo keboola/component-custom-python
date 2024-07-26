@@ -15,11 +15,12 @@ pipelines:
           - echo "Running unit-tests..."
           - docker run $APP_IMAGE . "$VIRTUAL_ENV/bin/activate" && python -m unittest discover
           # push test image to ecr - uncomment for testing before deployment
-          - echo 'Pushing test image to repo. [tag=test]'
+          - export TEST_TAG=${BITBUCKET_BRANCH//\//-}
+          - echo "Pushing test image to repo. [tag=${TEST_TAG}]"
           - export REPOSITORY=`docker run --rm -e KBC_DEVELOPERPORTAL_USERNAME -e KBC_DEVELOPERPORTAL_PASSWORD -e KBC_DEVELOPERPORTAL_URL quay.io/keboola/developer-portal-cli-v2:latest ecr:get-repository $KBC_DEVELOPERPORTAL_VENDOR $KBC_DEVELOPERPORTAL_APP`
-          - docker tag $APP_IMAGE:latest $REPOSITORY:test
+          - docker tag $APP_IMAGE:latest $REPOSITORY:$TEST_TAG
           - eval $(docker run --rm -e KBC_DEVELOPERPORTAL_USERNAME -e KBC_DEVELOPERPORTAL_PASSWORD -e KBC_DEVELOPERPORTAL_URL quay.io/keboola/developer-portal-cli-v2:latest ecr:get-login $KBC_DEVELOPERPORTAL_VENDOR $KBC_DEVELOPERPORTAL_APP)
-          - docker push $REPOSITORY:test
+          - docker push $REPOSITORY:$TEST_TAG
 
 
   branches:
@@ -36,11 +37,12 @@ pipelines:
             - echo "Running unit-tests..."
             - docker run $APP_IMAGE . "$VIRTUAL_ENV/bin/activate" && python -m unittest discover
             # push test image to ecr - uncomment for testing before deployment
-            - echo 'Pushing test image to repo. [tag=test]'
+            - export TEST_TAG=${BITBUCKET_BRANCH//\//-}
+            - echo "Pushing test image to repo. [tag=${TEST_TAG}]"
             - export REPOSITORY=`docker run --rm -e KBC_DEVELOPERPORTAL_USERNAME -e KBC_DEVELOPERPORTAL_PASSWORD -e KBC_DEVELOPERPORTAL_URL quay.io/keboola/developer-portal-cli-v2:latest ecr:get-repository $KBC_DEVELOPERPORTAL_VENDOR $KBC_DEVELOPERPORTAL_APP`
-            - docker tag $APP_IMAGE:latest $REPOSITORY:test
+            - docker tag $APP_IMAGE:latest $REPOSITORY:$TEST_TAG
             - eval $(docker run --rm -e KBC_DEVELOPERPORTAL_USERNAME -e KBC_DEVELOPERPORTAL_PASSWORD -e KBC_DEVELOPERPORTAL_URL quay.io/keboola/developer-portal-cli-v2:latest ecr:get-login $KBC_DEVELOPERPORTAL_VENDOR $KBC_DEVELOPERPORTAL_APP)
-            - docker push $REPOSITORY:test
+            - docker push $REPOSITORY:$TEST_TAG
             - chmod +x ./scripts/update_dev_portal_properties.sh
             - ./scripts/update_dev_portal_properties.sh
   tags:
