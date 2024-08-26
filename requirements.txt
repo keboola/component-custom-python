@@ -1,4 +1,4 @@
-keboola.component==1.4.4
+keboola.component==1.6.8
 airbyte==0.15.0
 dlt==0.5.1
 duckdb==1.0.0
