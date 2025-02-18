@@ -6,7 +6,9 @@ import json
 import logging
 import os
 import runpy
+import subprocess
 import sys
+import traceback
 from traceback import TracebackException
 
 from keboola.component.base import ComponentBase
@@ -57,7 +59,6 @@ class Component(ComponentBase):
             file.write(script)
 
     def execute_script_file(self, file_path):
-        import traceback
 
         # Change current working directory so that relative paths work
         os.chdir(self.data_folder_path)
@@ -93,17 +94,13 @@ class Component(ComponentBase):
 
     @staticmethod
     def install_packages(packages):
-        import subprocess
-        import sys
         for package in packages:
             args = [
-                sys.executable,
-                '-m', 'pip', 'install',
-                '--disable-pip-version-check',
-                '--no-cache-dir',
-                '--no-warn-script-location',  # ignore error: installed in '/var/www/.local/bin' which is not on PATH.
-                '--force-reinstall',
-                package
+                "uv",
+                "pip",
+                "install",
+                "--system",
+                package,
             ]
             process = subprocess.Popen(args,
                                        stdout=subprocess.PIPE,
