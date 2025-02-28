@@ -1,1 +1,1 @@
-Custom Python Application short description
+Custom Python Application 

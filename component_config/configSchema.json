@@ -9,7 +9,7 @@
   "properties": {
     "code": {
       "type": "string",
-      "title": "Python Code",
+      "title": "Python code",
       "format": "editor",
       "default": "from keboola.component import CommonInterface\nci = CommonInterface()\n# access user parameters\nprint(ci.configuration.parameters)",
       "options": {
@@ -26,12 +26,12 @@
       "items": {
         "type": "string"
       },
-      "title": "Python Packages",
+      "title": "Python packages",
       "format": "select",
       "options": {
         "tags": true
       },
-      "description": "Learn more about package installation and usage, and about the list of pre-installed packages in our <a href=\"https://help.keboola.com/transformations/\">documentation</a>",
+      "description": "Learn more about package installation, usage, and the list of pre-installed packages in our <a href=\"https://help.keboola.com/transformations/\">documentation</a>.",
       "uniqueItems": true,
       "propertyOrder": 1
     },
@@ -50,7 +50,7 @@
           "input_height": "100px"
         }
       },
-      "description": "User parameters accessible, the result will be injected in standard data/config.json parameters property as in any other component",
+      "description": "User parameters are accessible, and the result will be injected into the standard data/config.json parameters property, as in any other component.",
       "propertyOrder": 1
     }
   }
