@@ -1,2 +1,2 @@
 This component uses the latest version of our [Python Transformation backend](https://help.keboola.com/transformations/python/#environment).
-It contains the same packages and the code is executed in the same environment. So any code runing in Python transformation will work here and vice-versa.
+It includes the same packages, and the code runs in the same environment. Any code runing in a Python transformation will work here and vice versa.

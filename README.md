@@ -1,37 +1,38 @@
 Custom Python Application
 =============
 
-Description
 
 **Table of contents:**
 
 [TOC]
 
-Functionality notes
+Functionality Notes
 ===================
 
 Prerequisites
 =============
 
-Get the API token, register application, etc.
+- Obtain the API token
+- Register the application
+- Any other necessary setup steps
 
 Features
 ========
 
 | **Feature**             | **Note**                                      |
 |-------------------------|-----------------------------------------------|
-| Generic UI form         | Dynamic UI form                               |
-| Row Based configuration | Allows structuring the configuration in rows. |
-| oAuth                   | oAuth authentication enabled                  |
-| Incremental loading     | Allows fetching data in new increments.       |
-| Backfill mode           | Support for seamless backfill setup.          |
-| Date range filter       | Specify date range.                           |
+| Generic UI form         | Provides a dynamic UI form.                               |
+| Row-based configuration | Enables structured configuration using rows. |
+| OAuth                   | OAuth authentication is enabled.                  |
+| Incremental loading     | Supporst fetching data in increments.       |
+| Backfill mode           | Allows seamless backfill setup.          |
+| Date range filter       | Enables filtering data by a specifid date range.                           |
 
-Supported endpoints
+Supported Endpoints
 ===================
 
-If you need more endpoints, please submit your request to
-[ideas.keboola.com](https://ideas.keboola.com/)
+If you need additional endpoints, please submit a request to
+[ideas.keboola.com](https://ideas.keboola.com/).
 
 Configuration
 =============
@@ -45,13 +46,14 @@ Param 2
 Output
 ======
 
-List of tables, foreign keys, schema.
+- List of tables
+- Foreign keys
+- Schema
 
 Development
 -----------
 
-If required, change local data folder (the `CUSTOM_FOLDER` placeholder) path to
-your custom path in the `docker-compose.yml` file:
+If needed, update the local data folder path by replacing the `CUSTOM_FOLDER` placeholder in the `docker-compose.yml` file:
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     volumes:
@@ -59,8 +61,7 @@ your custom path in the `docker-compose.yml` file:
       - ./CUSTOM_FOLDER:/data
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Clone this repository, init the workspace and run the component with following
-command:
+Clone the repository, initialize the workspace, and run the component using the following commands:
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 git clone git@bitbucket.org:kds_consulting_team/kds-team.app-custom-python.git kds-team.app-custom-python
@@ -69,7 +70,7 @@ docker-compose build
 docker-compose run --rm dev
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Run the test suite and lint check using this command:
+To run the test suite and perform a lint check, use:
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 docker-compose run --rm test
@@ -78,6 +79,6 @@ docker-compose run --rm test
 Integration
 ===========
 
-For information about deployment and integration with KBC, please refer to the
-[deployment section of developers
-documentation](https://developers.keboola.com/extend/component/deployment/)
+For details on deployment and integration with Keboola, refer to the
+[deployment section of the developer
+documentation](https://developers.keboola.com/extend/component/deployment/).
