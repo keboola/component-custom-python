@@ -1,6 +1,5 @@
 """
 Template Component main class.
-
 """
 
 import json
@@ -67,7 +66,7 @@ class Component(ComponentBase):
         try:
             with open(file_path, "r") as file:
                 script = file.read()
-            logging.info('Execute script "%s"' % (self.script_excerpt(script)))
+            logging.info('Executing script "%s"', self.script_excerpt(script))
             runpy.run_path(file_path)
             logging.info("Script finished")
         except Exception as err:
@@ -130,7 +129,7 @@ class Component(ComponentBase):
 
 
 """
-        Main entrypoint
+Main entrypoint
 """
 if __name__ == "__main__":
     try:
