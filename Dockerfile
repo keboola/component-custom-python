@@ -5,17 +5,17 @@ FROM quay.io/keboola/docker-custom-python:latest
 
 RUN pip install uv
 
-# COPY requirements.txt /code/requirements.txt
-# COPY requirements-tests.txt /code/requirements-tests.txt
-COPY pyproject.toml /code/pyproject.toml
-
 WORKDIR /code/
-RUN uv sync
 
-COPY /src /code/src/
-COPY /tests /code/tests/
-COPY /scripts /code/scripts/
-COPY flake8.cfg /code/flake8.cfg
-COPY deploy.sh /code/deploy.sh
+COPY pyproject.toml .
+COPY uv.lock .
 
-CMD uv run /code/src/component.py
+RUN uv pip sync --system pyproject.toml
+
+COPY src/ src/
+COPY tests/ tests/
+COPY scripts/ scripts/
+COPY flake8.cfg .
+COPY deploy.sh .
+
+CMD uv run --active /code/src/component.py
