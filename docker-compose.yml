@@ -1,4 +1,3 @@
-version: "2"
 services:
   # for development purposes
   dev:
@@ -7,7 +6,7 @@ services:
         - ./:/code
         - ./data:/data
     environment:
-      - KBC_DATADIR=./data
+      - KBC_DATADIR=/data
   test:
     # Use to run flake8 and unittests checks
     build: .

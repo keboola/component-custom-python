@@ -1,0 +1,18 @@
+[project]
+name = "custom-python"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "dlt>=1.6.1",
+    "duckdb>=1.2.0",
+    "keboola-component>=1.6.10",
+]
+
+[dependency-groups]
+dev = [
+    "flake8>=7.1.2",
+    "freezegun>=1.5.1",
+    "mock>=5.2.0",
+]
