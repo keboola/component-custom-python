@@ -42,7 +42,6 @@ class Component(ComponentBase):
         parameters = self.configuration.parameters
 
         self._set_init_logging_handler()
-        logging.info(sys.executable)
         script_path = os.path.join(self.data_folder_path, "script.py")
         self.prepare_script_file(script_path)
 
