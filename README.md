@@ -6,7 +6,8 @@ This component lets you run your own Python code directly within Keboola, with s
 ## Configuration
 
 - `code`: JSON encoded Python code to run.
-- `packages`: List of extra packages to be installed.
+- `packages`: Array of extra packages to be installed.
+- `user_properties`: Object containing custom configuration parameters. The key names prefixed with `#` will be encrypted upon saving.
 
 If you're not sure whether you need to install certain package or not, you can run the command `uv pip list` via subprocess (see the example below).
 
@@ -23,6 +24,8 @@ print("See the full list of preinstalled packages:")
 
 subprocess.check_call(["uv", "pip", "list"])
 ```
+
+The above code in the `config.json` file format for local testing:
 
 ```json
 {
@@ -45,6 +48,8 @@ ci = CommonInterface()
 # access user parameters
 print(ci.configuration.parameters)
 ```
+
+The above code in the `config.json` file format for local testing:
 
 ```json
 {
