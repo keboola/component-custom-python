@@ -11,7 +11,7 @@
       "type": "string",
       "title": "Python code",
       "format": "editor",
-      "default": "from keboola.component import CommonInterface\nci = CommonInterface()\n# access user parameters\nprint(ci.configuration.parameters)",
+      "default": "from keboola.component import CommonInterface\n\nci = CommonInterface()\n# access user parameters\nprint(ci.configuration.parameters)",
       "options": {
         "editor": {
           "mode": "text/x-python",
