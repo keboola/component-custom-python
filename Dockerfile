@@ -8,6 +8,7 @@ WORKDIR /code/
 COPY pyproject.toml .
 COPY uv.lock .
 
+ENV UV_LINK_MODE=copy
 RUN uv pip sync --system pyproject.toml
 
 COPY src/ src/
