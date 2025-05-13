@@ -95,8 +95,8 @@ class Component(ComponentBase):
         for package in packages:
             args = [
                 "uv",
-                "pip",
-                "install",
+                "add",
+                "--frozen",
                 package,
             ]
             process = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)

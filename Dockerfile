@@ -8,8 +8,10 @@ WORKDIR /code/
 COPY pyproject.toml .
 COPY uv.lock .
 
-ENV UV_LINK_MODE=copy
-RUN uv pip sync --system pyproject.toml
+# unset VIRTUAL_ENV variable from parent image as it messes up with uv
+ENV VIRTUAL_ENV=
+ENV UV_PROJECT_ENVIRONMENT="/usr/local/"
+RUN uv sync --all-groups --frozen
 
 COPY src/ src/
 COPY tests/ tests/
@@ -17,4 +19,4 @@ COPY scripts/ scripts/
 COPY flake8.cfg .
 COPY deploy.sh .
 
-CMD uv run --active /code/src/component.py
+CMD ["python", "/code/src/component.py"]
