@@ -63,9 +63,9 @@ class Component(ComponentBase):
         sys.path.append(self.data_folder_path)
 
         try:
-            with open(file_path, "r") as file:
+            with open(file_path) as file:
                 script = file.read()
-            logging.info('Executing script "%s"', self.script_excerpt(script))
+            logging.debug('Executing script "%s"', self.script_excerpt(script))
             runpy.run_path(file_path)
             logging.info("Script finished")
         except Exception as err:
@@ -95,8 +95,7 @@ class Component(ComponentBase):
         for package in packages:
             args = [
                 "uv",
-                "pip",
-                "install",
+                "add",
                 package,
             ]
             process = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
