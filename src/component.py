@@ -93,6 +93,7 @@ class Component(ComponentBase):
     @staticmethod
     def install_packages(packages):
         for package in packages:
+            logging.info("Installing package: %s...", package)
             args = [
                 "uv",
                 "add",
@@ -100,8 +101,8 @@ class Component(ComponentBase):
             ]
             process = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             stdout, stderr = process.communicate()
-            logging.info(f"Installing package: {package}. Full log in detail.", extra={"full_message": stdout})
             process.poll()
+            logging.info("Installation finished: %s. Full log in detail.", package, extra={"full_message": stdout})
             if process.poll() != 0:
                 raise UserException(f"Failed to install package: {package}. Log in event detail.", stderr)
             elif stderr:
