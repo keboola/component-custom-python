@@ -2,10 +2,11 @@ name: Keboola Component Build & Deploy Pipeline
 on:
   push:
     branches:
-      - 'feature/*'
-      - 'bug/*'
+      - feature/*
+      - bug/*
+      - fix/*
     tags:
-      - '*' # Skip the workflow on the main branch without tags
+      - "*" # Skip the workflow on the main branch without tags
 
 concurrency: ci-${{ github.ref }} # to avoid tag collisions in the ECR
 env:
