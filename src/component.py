@@ -61,9 +61,9 @@ class Component(ComponentBase):
         try:
             with open(file_path) as file:
                 script = file.read()
-            logging.debug('Executing script "%s"', self.script_excerpt(script))
+            logging.info("Executing script:\n%s", self.script_excerpt(script))
             runpy.run_path(file_path)
-            logging.info("Script finished")
+            logging.info("Script finished successfully.")
         except Exception as err:
             _, _, tb = sys.exc_info()
             stack_len = len(traceback.extract_tb(tb)[4:])
@@ -81,8 +81,8 @@ class Component(ComponentBase):
 
     @staticmethod
     def script_excerpt(script):
-        if len(script) > 1000:
-            return script[0:500] + "\n...\n" + script[-500]
+        if len(script) > 640:
+            return script[:256] + "\n...\n" + script[-256:]
         else:
             return script
 
