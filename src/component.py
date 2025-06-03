@@ -11,17 +11,13 @@ import sys
 import traceback
 from traceback import TracebackException
 
+import dacite
 from keboola.component.base import ComponentBase
 from keboola.component.exceptions import UserException
 
-# configuration variables
-KEY_API_TOKEN = "#api_token"
-KEY_PRINT_HELLO = "print_hello"
-
-# list of mandatory parameters => if some is missing,
-# component will fail with readable message on initialization.
-REQUIRED_PARAMETERS = [KEY_PRINT_HELLO]
-REQUIRED_IMAGE_PARS = []
+import source_file
+import source_git
+from configuration import Configuration, SourceEnum, encrypted_keys
 
 
 class Component(ComponentBase):
@@ -37,25 +33,25 @@ class Component(ComponentBase):
 
     def __init__(self):
         super().__init__()
+        self._set_init_logging_handler()
+        self.parameters = dacite.from_dict(
+            Configuration,
+            self.configuration.parameters,
+            config=dacite.Config(cast=[SourceEnum], convert_key=encrypted_keys),
+        )
 
     def run(self):
-        parameters = self.configuration.parameters
-
-        self._set_init_logging_handler()
-        script_path = os.path.join(self.data_folder_path, "script.py")
-        self.prepare_script_file(script_path)
+        if self.parameters.source == SourceEnum.CODE:
+            script_path = source_file.FileHandler.prepare_script_file(self.data_folder_path, self.parameters.code)
+        else:
+            git_handler = source_git.GitHandler(self.parameters.git)
+            script_path = git_handler.clone_repository()
 
         self._merge_user_parameters()
 
-        # install packages
-        self.install_packages(parameters.get("packages", []))
+        self.install_packages(self.parameters.packages)
 
         self.execute_script_file(script_path)
-
-    def prepare_script_file(self, destination_path: str):
-        script = self.configuration.parameters["code"]
-        with open(destination_path, "w+") as file:
-            file.write(script)
 
     def execute_script_file(self, file_path):
         # Change current working directory so that relative paths work
@@ -122,7 +118,7 @@ class Component(ComponentBase):
         config_data = self.configuration.config_data.copy()
 
         # build config data and overwrite for the user script
-        config_data["parameters"] = self.configuration.parameters.get("user_properties", {})
+        config_data["parameters"] = self.parameters.user_properties
         with open(os.path.join(self.data_folder_path, "config.json"), "w+") as inp:
             json.dump(config_data, inp)
 

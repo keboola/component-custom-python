@@ -19,6 +19,10 @@ ENV UV_PROJECT_ENVIRONMENT="/home/default/"
 # Run uv sync as uid/gid 1000 so we don't have to chown the /home/default directory with 100k files =-O
 USER 1000:1000
 
+# Add Github SSH host key to known_hosts file
+RUN mkdir /home/${USERNAME}/.ssh
+COPY .ssh/known_hosts /home/${USERNAME}/.ssh/known_hosts
+
 WORKDIR /code/
 COPY pyproject.toml .
 COPY uv.lock .
