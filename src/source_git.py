@@ -1,17 +1,21 @@
 import logging
 import os
+import pathlib
 import subprocess
+import sys
 
 from keboola.component.exceptions import UserException
 
 from configuration import GitConfiguration
 
 
-REPO_PATH = "repo_clone"
-
-
 class GitHandler:
     def __init__(self, cfg: GitConfiguration):
+        self.REPO_PATH = "repo_clone"
+
+        # add path for absolute imports to start at the cloned repository root level
+        sys.path.append(os.path.join(pathlib.Path(__file__).parent.parent, self.REPO_PATH))
+
         self.cfg = cfg
 
     def clone_repository(self):
@@ -31,6 +35,7 @@ class GitHandler:
 
         try:
             clone_args = ["git", "clone"]
+
             if branch:
                 clone_args.extend(["--branch", branch])
 
@@ -39,7 +44,8 @@ class GitHandler:
 
             if self.cfg.encrypted_token:
                 repo_url = repo_url.replace("https://", f"https://x-token-auth:{self.cfg.encrypted_token}@")
-            clone_args.extend([repo_url, REPO_PATH])
+
+            clone_args.extend([repo_url, self.REPO_PATH])
 
             env = os.environ.copy()
 
@@ -86,7 +92,7 @@ class GitHandler:
 
             logging.info("Successfully cloned repository")
 
-            source_dir = os.path.join(os.getcwd(), REPO_PATH)
+            source_dir = os.path.join(os.getcwd(), self.REPO_PATH)
             main_script_path = os.path.join(source_dir, self.cfg.filename)
             if not os.path.exists(main_script_path):
                 raise UserException(f"Main script file '{self.cfg.filename}' not found in repository")
