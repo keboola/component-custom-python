@@ -39,7 +39,7 @@ class GitHandler:
             if branch:
                 clone_args.extend(["--branch", branch])
 
-            if self.cfg.encrypted_ssh_key and self.cfg.encrypted_token:
+            if self.cfg.ssh_keys.keys.encrypted_private and self.cfg.encrypted_token:
                 self.cfg.encrypted_token = None
 
             if self.cfg.encrypted_token:
@@ -63,10 +63,10 @@ class GitHandler:
                 "ServerAliveInterval=60",
             ]
 
-            if self.cfg.encrypted_ssh_key:
+            if self.cfg.ssh_keys.keys.encrypted_private:
                 ssh_key_path = os.path.expanduser("~/.ssh/github_private_key")
                 with open(ssh_key_path, "wb") as f:
-                    for line in self.cfg.encrypted_ssh_key.splitlines():
+                    for line in self.cfg.ssh_keys.keys.encrypted_private.splitlines():
                         f.write(line.encode() + b"\n")
                 # ensure SSH key has correct permissions
                 os.chmod(ssh_key_path, 0o600)
