@@ -1,183 +1,194 @@
 {
-  "flags": [
-    "genericDockerUI",
-    "genericDockerUI-tableInput",
-    "genericDockerUI-fileInput",
-    "genericDockerUI-tableOutput",
-    "genericDockerUI-fileOutput",
-    "genericDockerUI-processors",
-    "appInfo.beta"
+  "type": "object",
+  "title": "Configuration",
+  "required": [
+    "user_properties",
+    "code",
+    "packages"
   ],
-  "configurationSchema": {
-    "type": "object",
-    "title": "Configuration",
-    "required": [
-      "user_properties",
-      "code",
-      "packages"
-    ],
-    "properties": {
-      "user_properties": {
-        "type": "object",
-        "title": "User Parameters",
-        "format": "editor",
-        "default": {
-          "debug": false
-        },
-        "options": {
-          "editor": {
-            "lint": true,
-            "mode": "application/json",
-            "lineNumbers": true,
-            "input_height": "100px"
-          }
-        },
-        "description": "User parameters will be inserted in the `/data/config.json` file. They can be accessed in the code via `keboola.component.CommonInterface`, see an example in the documentation or when creating a new configuration."
+  "properties": {
+    "user_properties": {
+      "type": "object",
+      "title": "User Parameters",
+      "format": "editor",
+      "default": {
+        "debug": false
       },
-      "source": {
-        "enum": [
-          "code",
-          "git"
-        ],
-        "options": {
-          "enum_titles": [
-            "Enter manually into text areas below",
-            "Get from Git repository"
-          ]
-        },
-        "type": "radio",
-        "default": "code",
-        "title": "Source code & dependencies",
-        "required": false
-      },
-      "packages": {
-        "type": "array",
-        "items": {
-          "type": "string"
-        },
-        "title": "Python packages",
-        "format": "select",
-        "options": {
-          "dependencies": {
-            "source": "code"
-          },
-          "tags": true
-        },
-        "description": "Learn more about package installation, usage, and the list of pre-installed packages in our <a href=\"https://help.keboola.com/transformations/\">documentation</a>.",
-        "uniqueItems": true
-      },
-      "code": {
-        "type": "string",
-        "title": "Python code",
-        "format": "editor",
-        "default": "from keboola.component import CommonInterface\n\nci = CommonInterface()\n# access user parameters\nprint(ci.configuration.parameters)",
-        "options": {
-          "dependencies": {
-            "source": "code"
-          },
-          "editor": {
-            "mode": "text/x-python",
-            "lineNumbers": true,
-            "input_height": "100px"
-          }
+      "options": {
+        "editor": {
+          "lint": true,
+          "mode": "application/json",
+          "lineNumbers": true,
+          "input_height": "100px"
         }
       },
-      "git": {
-        "type": "object",
-        "title": "Git repository source settings",
-        "options": {
-          "dependencies": {
-            "source": "git"
-          },
-          "required": [
-            "url",
-            "branch",
-            "filename"
+      "description": "User parameters will be inserted in the `/data/config.json` file. They can be accessed in the code via `keboola.component.CommonInterface`, see an example in the documentation or when creating a new configuration."
+    },
+    "source": {
+      "type": "radio",
+      "title": "Source code & dependencies",
+      "enum": [
+        "code",
+        "git"
+      ],
+      "options": {
+        "enum_titles": [
+          "Enter manually into text areas below",
+          "Get from Git repository"
+        ]
+      },
+      "default": "code",
+      "required": false
+    },
+    "packages": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "title": "Python packages",
+      "format": "select",
+      "options": {
+        "dependencies": {
+          "source": "code"
+        },
+        "tags": true
+      },
+      "description": "Learn more about package installation, usage, and the list of pre-installed packages in our <a href=\"https://help.keboola.com/transformations/\">documentation</a>.",
+      "uniqueItems": true
+    },
+    "code": {
+      "type": "string",
+      "title": "Python code",
+      "format": "editor",
+      "default": "from keboola.component import CommonInterface\n\nci = CommonInterface()\n# access user parameters\nprint(ci.configuration.parameters)",
+      "options": {
+        "dependencies": {
+          "source": "code"
+        },
+        "editor": {
+          "mode": "text/x-python",
+          "lineNumbers": true,
+          "input_height": "100px"
+        }
+      }
+    },
+    "git": {
+      "type": "object",
+      "title": "Git repository source settings",
+      "options": {
+        "dependencies": {
+          "source": "git"
+        }
+      },
+      "required": [
+        "url",
+        "branch",
+        "filename"
+      ],
+      "properties": {
+        "url": {
+          "type": "string",
+          "title": "Repository URL"
+        },
+        "branch": {
+          "type": "string",
+          "title": "Branch name"
+        },
+        "filename": {
+          "type": "string",
+          "title": "Script filename"
+        },
+        "auth": {
+          "type": "radio",
+          "enum": [
+            "none",
+            "pat",
+            "ssh"
           ],
-          "properties": {
-            "url": {
-              "type": "string",
-              "title": "Repository URL"
-            },
-            "branch": {
-              "type": "string",
-              "title": "Branch name"
-            },
-            "filename": {
-              "type": "string",
-              "title": "Script filename"
-            },
-            "#token": {
-              "type": "string",
-              "title": "Personal access token"
-            },
-            "#ssh_key": {
-              "type": "string",
-              "title": "SSH key"
-            },
-            "ssh_keys": {
-              "type": "object",
-              "format": "ssh-editor",
-              "options": {
-                "only_keys": true
-              }
+          "options": {
+            "enum_titles": [
+              "Public – None",
+              "Private – PAT token",
+              "Private – SSH key"
+            ]
+          },
+          "default": "none",
+          "title": "Repository visibility & authorization",
+          "required": false
+        },
+        "#token": {
+          "type": "string",
+          "title": "Personal access token",
+          "options": {
+            "dependencies": {
+              "auth": "pat"
+            }
+          }
+        },
+        "ssh_keys": {
+          "type": "object",
+          "format": "ssh-editor",
+          "options": {
+            "only_keys": true,
+            "dependencies": {
+              "auth": "ssh"
             }
           }
         }
       }
-    },
-    "configurationRowSchema": {},
-    "emptyConfiguration": {},
-    "emptyConfigurationRow": {},
-    "createConfigurationRowSchema": {},
-    "description": "Custom Python Application ",
-    "configurationDescription": "This component uses the latest version of our [Python Transformation backend](https://help.keboola.com/transformations/python/#environment).\nIt includes the same packages, and the code runs in the same environment. Any code runing in a Python transformation will work here and vice versa.",
-    "dataTypesConfiguration": {
-      "dataTypesSupport": "none"
-    },
-    "processorConfiguration": {
-      "allowedProcessorPosition": "any"
-    },
-    "data": {
-      "configuration_format": "json",
-      "memory": "8192m",
-      "forward_token_details": false,
-      "vendor": {
-        "contact": [
-          "KDS Team",
-          "Keboola Global\n(Vancouver, London, Prague, Chicago)",
-          "component.factory@keboola.com"
-        ],
-        "licenseUrl": "https://github.com/keboola/component-custom-python/blob/main/LICENSE.md"
-      },
-      "default_bucket": false,
-      "network": "bridge",
-      "process_timeout": 21600,
-      "definition": {
-        "type": "aws-ecr",
-        "uri": "147946154733.dkr.ecr.us-east-1.amazonaws.com/developer-portal-v2/kds-team.app-custom-python",
-        "tag": "0.2.3",
-        "digest": "sha256:6e61b7c6d3f723d2a590d713dc928ad4ebea99eb1c800195fff517499b43cc17"
-      },
-      "staging_storage": {
-        "input": "local",
-        "output": "local"
-      },
-      "logging": {
-        "verbosity": {
-          "100": "verbose",
-          "200": "verbose",
-          "250": "verbose",
-          "300": "verbose",
-          "400": "verbose",
-          "500": "camouflage",
-          "550": "camouflage",
-          "600": "camouflage"
-        },
-        "gelf_server_type": "tcp",
-        "type": "gelf"
-      },
-      "forward_token": false
     }
+  },
+  "configurationRowSchema": {},
+  "emptyConfiguration": {},
+  "emptyConfigurationRow": {},
+  "createConfigurationRowSchema": {},
+  "description": "Custom Python Application ",
+  "configurationDescription": "This component uses the latest version of our [Python Transformation backend](https://help.keboola.com/transformations/python/#environment).\nIt includes the same packages, and the code runs in the same environment. Any code runing in a Python transformation will work here and vice versa.",
+  "dataTypesConfiguration": {
+    "dataTypesSupport": "none"
+  },
+  "processorConfiguration": {
+    "allowedProcessorPosition": "any"
+  },
+  "data": {
+    "configuration_format": "json",
+    "memory": "8192m",
+    "forward_token_details": false,
+    "vendor": {
+      "contact": [
+        "KDS Team",
+        "Keboola Global\n(Vancouver, London, Prague, Chicago)",
+        "component.factory@keboola.com"
+      ],
+      "licenseUrl": "https://github.com/keboola/component-custom-python/blob/main/LICENSE.md"
+    },
+    "default_bucket": false,
+    "network": "bridge",
+    "process_timeout": 21600,
+    "definition": {
+      "type": "aws-ecr",
+      "uri": "147946154733.dkr.ecr.us-east-1.amazonaws.com/developer-portal-v2/kds-team.app-custom-python-test",
+      "tag": "0.2.3",
+      "digest": "sha256:6e61b7c6d3f723d2a590d713dc928ad4ebea99eb1c800195fff517499b43cc17"
+    },
+    "staging_storage": {
+      "input": "local",
+      "output": "local"
+    },
+    "logging": {
+      "verbosity": {
+        "100": "verbose",
+        "200": "verbose",
+        "250": "verbose",
+        "300": "verbose",
+        "400": "verbose",
+        "500": "camouflage",
+        "550": "camouflage",
+        "600": "camouflage"
+      },
+      "gelf_server_type": "tcp",
+      "type": "gelf"
+    },
+    "forward_token": false
   }
 }

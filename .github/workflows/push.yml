@@ -11,7 +11,7 @@ on:
 concurrency: ci-${{ github.ref }} # to avoid tag collisions in the ECR
 env:
   # repository variables:
-  KBC_DEVELOPERPORTAL_APP: "kds-team.app-custom-python" # replace with your component id
+  KBC_DEVELOPERPORTAL_APP: "kds-team.app-custom-python-test" # replace with your component id
   KBC_DEVELOPERPORTAL_VENDOR: "kds-team" # replace with your vendor
   DOCKERHUB_USER: ${{ secrets.DOCKERHUB_USER }}
   KBC_DEVELOPERPORTAL_USERNAME: "kds-team+github"
@@ -201,7 +201,7 @@ jobs:
       - push_event_info
       - build
       - push
-    if: needs.push_event_info.outputs.is_deploy_ready == 'true'
+    # if: needs.push_event_info.outputs.is_deploy_ready == 'true'
     runs-on: ubuntu-latest
     steps:
       - name: Set Developer Portal Tag
@@ -222,7 +222,7 @@ jobs:
       - build
       - push
     runs-on: ubuntu-latest
-    if: needs.push_event_info.outputs.is_deploy_ready == 'true'
+    # if: needs.push_event_info.outputs.is_deploy_ready == 'true'
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
