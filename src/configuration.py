@@ -12,14 +12,32 @@ class SourceEnum(Enum):
     GIT = "git"
 
 
+class AuthEnum(Enum):
+    NONE = "none"
+    PAT = "pat"
+    SSH = "ssh"
+
+
+# the ssh_keys.keys.[#private,public] structure is based on Keboola's standard SSH keys UI element output structure
+@dataclass
+class KeysConfiguration:
+    public: str | None = None
+    encrypted_private: str | None = None
+
+
+@dataclass
+class SSHKeysConfiguration:
+    keys: KeysConfiguration = field(default_factory=KeysConfiguration)
+
+
 @dataclass
 class GitConfiguration:
     url: str = ""
     branch: str = "main"
     filename: str = "main.py"
-    username: str | None = None  # not used at all, could be removed from the configuration
+    auth: AuthEnum = AuthEnum.NONE
     encrypted_token: str | None = None
-    encrypted_ssh_key: str | None = None
+    ssh_keys: SSHKeysConfiguration = field(default_factory=SSHKeysConfiguration)
 
 
 @dataclass

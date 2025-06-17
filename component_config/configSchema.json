@@ -7,19 +7,41 @@
     "packages"
   ],
   "properties": {
-    "code": {
-      "type": "string",
-      "title": "Python code",
+    "user_properties": {
+      "type": "object",
+      "title": "User Parameters",
       "format": "editor",
-      "default": "from keboola.component import CommonInterface\n\nci = CommonInterface()\n# access user parameters\nprint(ci.configuration.parameters)",
+      "propertyOrder": 10,
+      "default": {
+        "debug": false
+      },
       "options": {
+        "tooltip": "User parameters will be inserted in the `/data/config.json` file. They can be accessed in the code via `keboola.component.CommonInterface`, see an example in the documentation or when creating a new configuration.",
         "editor": {
-          "mode": "text/x-python",
+          "lint": true,
+          "mode": "application/json",
           "lineNumbers": true,
           "input_height": "100px"
         }
+      }
+    },
+    "source": {
+      "type": "radio",
+      "title": "Source code & dependencies",
+      "propertyOrder": 20,
+      "enum": [
+        "code",
+        "git"
+      ],
+      "options": {
+        "tooltip": "If you choose to provide the code to be ran via Git repository, any custom packages to be installed have to be specified:\n\n- in a **pyproject.toml** file accompanied with its corresponding **uv.lock file** (the modern way), or\n- in a **requirements.txt** file (the old way).\n\nThese files need to be present in the root folder of your repository. When all the aforementioned files are present, the modern way takes precedence.",
+        "enum_titles": [
+          "Enter manually into text areas below",
+          "Get from Git repository"
+        ]
       },
-      "propertyOrder": 10
+      "default": "code",
+      "required": false
     },
     "packages": {
       "type": "array",
@@ -28,30 +50,104 @@
       },
       "title": "Python packages",
       "format": "select",
+      "propertyOrder": 30,
       "options": {
+        "dependencies": {
+          "source": "code"
+        },
         "tags": true
       },
       "description": "Learn more about package installation, usage, and the list of pre-installed packages in our <a href=\"https://help.keboola.com/transformations/\">documentation</a>.",
-      "uniqueItems": true,
-      "propertyOrder": 1
+      "uniqueItems": true
     },
-    "user_properties": {
-      "type": "object",
-      "title": "User Parameters",
+    "code": {
+      "type": "string",
+      "title": "Python code",
       "format": "editor",
-      "default": {
-        "debug": false
-      },
+      "propertyOrder": 40,
+      "default": "from keboola.component import CommonInterface\n\nci = CommonInterface()\n# access user parameters\nprint(ci.configuration.parameters)",
       "options": {
+        "dependencies": {
+          "source": "code"
+        },
         "editor": {
-          "lint": true,
-          "mode": "application/json",
+          "mode": "text/x-python",
           "lineNumbers": true,
           "input_height": "100px"
         }
+      }
+    },
+    "git": {
+      "type": "object",
+      "title": "Git repository source settings",
+      "propertyOrder": 50,
+      "options": {
+        "dependencies": {
+          "source": "git"
+        }
       },
-      "description": "User parameters are accessible, and the result will be injected into the standard data/config.json parameters property, as in any other component.",
-      "propertyOrder": 1
+      "required": [
+        "url",
+        "branch",
+        "filename"
+      ],
+      "properties": {
+        "url": {
+          "type": "string",
+          "title": "Repository URL",
+          "propertyOrder": 60
+        },
+        "branch": {
+          "type": "string",
+          "title": "Branch name",
+          "propertyOrder": 70
+        },
+        "filename": {
+          "type": "string",
+          "title": "Script filename",
+          "propertyOrder": 80
+        },
+        "auth": {
+          "type": "radio",
+          "title": "Repository visibility & authorization",
+          "propertyOrder": 90,
+          "enum": [
+            "none",
+            "pat",
+            "ssh"
+          ],
+          "options": {
+            "enum_titles": [
+              "Public – None",
+              "Private – PAT token",
+              "Private – SSH key"
+            ]
+          },
+          "default": "none",
+          "required": false
+        },
+        "#token": {
+          "type": "string",
+          "title": "Personal access token",
+          "propertyOrder": 100,
+          "options": {
+            "dependencies": {
+              "auth": "pat"
+            }
+          }
+        },
+        "ssh_keys": {
+          "type": "object",
+          "format": "ssh-editor",
+          "propertyOrder": 110,
+          "options": {
+            "only_keys": true,
+            "dependencies": {
+              "auth": "ssh"
+            }
+          }
+        }
+      }
     }
   }
 }
