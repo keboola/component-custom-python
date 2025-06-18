@@ -27,7 +27,7 @@
     },
     "source": {
       "type": "radio",
-      "title": "Source code & dependencies",
+      "title": "Source Code & Dependencies",
       "propertyOrder": 20,
       "enum": [
         "code",
@@ -48,7 +48,7 @@
       "items": {
         "type": "string"
       },
-      "title": "Python packages",
+      "title": "Python Packages",
       "format": "select",
       "propertyOrder": 30,
       "options": {
@@ -62,7 +62,7 @@
     },
     "code": {
       "type": "string",
-      "title": "Python code",
+      "title": "Python Code",
       "format": "editor",
       "propertyOrder": 40,
       "default": "from keboola.component import CommonInterface\n\nci = CommonInterface()\n# access user parameters\nprint(ci.configuration.parameters)",
@@ -79,7 +79,7 @@
     },
     "git": {
       "type": "object",
-      "title": "Git repository source settings",
+      "title": "Git Repository Source Settings",
       "propertyOrder": 50,
       "options": {
         "dependencies": {
@@ -99,17 +99,17 @@
         },
         "branch": {
           "type": "string",
-          "title": "Branch name",
+          "title": "Branch Name",
           "propertyOrder": 70
         },
         "filename": {
           "type": "string",
-          "title": "Script filename",
+          "title": "Script Filename",
           "propertyOrder": 80
         },
         "auth": {
           "type": "radio",
-          "title": "Repository visibility & authorization",
+          "title": "Repository Visibility & Authentication",
           "propertyOrder": 90,
           "enum": [
             "none",
@@ -119,8 +119,8 @@
           "options": {
             "enum_titles": [
               "Public – None",
-              "Private – PAT token",
-              "Private – SSH key"
+              "Private – Personal Access Token",
+              "Private – SSH Key"
             ]
           },
           "default": "none",
@@ -128,7 +128,7 @@
         },
         "#token": {
           "type": "string",
-          "title": "Personal access token",
+          "title": "Personal Access Token",
           "propertyOrder": 100,
           "options": {
             "dependencies": {
