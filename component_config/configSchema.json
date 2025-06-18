@@ -99,8 +99,17 @@
         },
         "branch": {
           "type": "string",
+          "enum": [],
           "title": "Branch Name",
-          "propertyOrder": 70
+          "propertyOrder": 70,
+          "options": {
+            "async": {
+              "cache": false,
+              "label": "List Branches",
+              "action": "listBranches",
+              "autoload": []
+            }
+          }
         },
         "filename": {
           "type": "string",

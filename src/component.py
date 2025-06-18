@@ -12,12 +12,12 @@ import traceback
 from traceback import TracebackException
 
 import dacite
-from keboola.component.base import ComponentBase
+from keboola.component.base import ComponentBase, sync_action
 from keboola.component.exceptions import UserException
 
 import source_file
 import source_git
-from configuration import Configuration, SourceEnum, encrypted_keys
+from configuration import AuthEnum, Configuration, SourceEnum, encrypted_keys
 
 
 class Component(ComponentBase):
@@ -37,7 +37,7 @@ class Component(ComponentBase):
         self.parameters = dacite.from_dict(
             Configuration,
             self.configuration.parameters,
-            config=dacite.Config(cast=[SourceEnum], convert_key=encrypted_keys),
+            config=dacite.Config(cast=[AuthEnum, SourceEnum], convert_key=encrypted_keys),
         )
 
     def run(self):
@@ -121,6 +121,15 @@ class Component(ComponentBase):
         config_data["parameters"] = self.parameters.user_properties
         with open(os.path.join(self.data_folder_path, "config.json"), "w+") as inp:
             json.dump(config_data, inp)
+
+    @sync_action("listBranches")
+    def get_repository_branches(self):
+        """
+        Returns a list of branches in the git repository.
+        This method is used to populate the branches dropdown in the UI.
+        """
+        git_handler = source_git.GitHandler(self.parameters.git)
+        return git_handler.get_repository_branches()
 
 
 """

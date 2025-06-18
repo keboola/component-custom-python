@@ -6,7 +6,7 @@ import sys
 
 from keboola.component.exceptions import UserException
 
-from configuration import GitConfiguration
+from configuration import AuthEnum, GitConfiguration
 
 
 class GitHandler:
@@ -16,7 +16,65 @@ class GitHandler:
         # add path for absolute imports to start at the cloned repository root level
         sys.path.append(os.path.join(pathlib.Path(__file__).parent.parent, self.REPO_PATH))
 
+        self.env = os.environ.copy()
         self.git_cfg = git_cfg
+        self.repo_auth_url = None  # ‼️ NEVER EVER INCLUDE THIS VARIABLE IN LOGGING OUTPUT ‼️
+
+        if not self.git_cfg.url:
+            raise UserException("Git repository URL is required")
+
+        if self.git_cfg.auth == AuthEnum.PAT:
+            self._set_up_token_auth()
+        else:
+            self._set_up_ssh_command()
+
+        # do not ask for credentials when git authentication fails
+        self.env["GIT_TERMINAL_PROMPT"] = "0"
+
+    def _set_up_token_auth(self) -> None:
+        if not self.git_cfg.encrypted_token:
+            raise UserException("No personal access token provided")
+
+        if not self.git_cfg.url.startswith("https://"):
+            raise UserException("PAT authentication is only supported for HTTPS URLs")
+
+        self.repo_auth_url = self.git_cfg.url.replace(
+            "https://", f"https://x-token-auth:{self.git_cfg.encrypted_token}@"
+        )
+        logging.info("Git token authentication set up for HTTPS URL.")
+
+    def _set_up_ssh_command(self) -> None:
+        if self.git_cfg.auth == AuthEnum.SSH and not self.git_cfg.ssh_keys.keys.encrypted_private:
+            raise UserException("SSH key is required for SSH authentication")
+
+        repo_url = self.git_cfg.url
+        if repo_url.startswith("git@") or repo_url.startswith("ssh://"):
+            logging.warning("SSH URL detected but no ssh_key_path provided. Trying default SSH configuration.")
+
+        ssh_command = [
+            "ssh",
+            # the following lines could be used to disable strict host key checking, but it is better
+            # for security reasons to use the known_hosts file prepared in Dockerfile
+            # "-o",
+            # "StrictHostKeyChecking=no",
+            "-o",
+            "BatchMode=yes",  # do not ask for credentials when SSH auth fails
+            "-o",
+            "ConnectTimeout=30",
+            "-o",
+            "ServerAliveInterval=60",
+        ]
+
+        if self.git_cfg.ssh_keys.keys.encrypted_private:
+            ssh_key_path = os.path.expanduser("~/.ssh/github_private_key")
+            with open(ssh_key_path, "wb") as f:
+                for line in self.git_cfg.ssh_keys.keys.encrypted_private.splitlines():
+                    f.write(line.encode() + b"\n")
+            # ensure SSH key has correct permissions
+            os.chmod(ssh_key_path, 0o600)
+            ssh_command.extend(["-i", ssh_key_path])
+
+        self.env["GIT_SSH_COMMAND"] = " ".join(ssh_command)
 
     def clone_repository(self):
         """
@@ -25,13 +83,10 @@ class GitHandler:
         Returns:
             Path to the main script file to execute
         """
-        repo_url = self.git_cfg.url
-        if not repo_url:
-            raise UserException("Git repository URL is required")
 
         branch = self.git_cfg.branch or "main"
 
-        logging.info("Cloning git repository: %s", repo_url)
+        logging.info("Cloning git repository: %s", self.git_cfg.url)
 
         try:
             clone_args = ["git", "clone"]
@@ -39,48 +94,13 @@ class GitHandler:
             if branch:
                 clone_args.extend(["--branch", branch])
 
-            if self.git_cfg.ssh_keys.keys.encrypted_private and self.git_cfg.encrypted_token:
-                self.git_cfg.encrypted_token = None
-
-            if self.git_cfg.encrypted_token and repo_url.startswith("https://"):
-                repo_url = repo_url.replace("https://", f"https://x-token-auth:{self.git_cfg.encrypted_token}@")
-
-            clone_args.extend([repo_url, self.REPO_PATH])
-
-            env = os.environ.copy()
-
-            ssh_command = [
-                "ssh",
-                # the following lines could be used to disable strict host key checking, but it is better
-                # for security reasons to use the known_hosts file prepared in Dockerfile
-                # "-o",
-                # "StrictHostKeyChecking=no",
-                "-o",
-                "BatchMode=yes",  # do not ask for credentials when SSH auth fails
-                "-o",
-                "ConnectTimeout=30",
-                "-o",
-                "ServerAliveInterval=60",
-            ]
-
-            if self.git_cfg.ssh_keys.keys.encrypted_private:
-                ssh_key_path = os.path.expanduser("~/.ssh/github_private_key")
-                with open(ssh_key_path, "wb") as f:
-                    for line in self.git_cfg.ssh_keys.keys.encrypted_private.splitlines():
-                        f.write(line.encode() + b"\n")
-                # ensure SSH key has correct permissions
-                os.chmod(ssh_key_path, 0o600)
-                ssh_command.extend(["-i", ssh_key_path])
-            elif repo_url.startswith("git@") or repo_url.startswith("ssh://"):
-                logging.warning("SSH URL detected but no ssh_key_path provided. Trying default SSH configuration.")
-
-            env["GIT_SSH_COMMAND"] = " ".join(ssh_command)
+            clone_args.extend([self.repo_auth_url or self.git_cfg.url, self.REPO_PATH])
 
             process = subprocess.Popen(
                 clone_args,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
-                env=env,
+                env=self.env,
             )
             _, stderr = process.communicate()
 
@@ -110,33 +130,23 @@ class GitHandler:
             List of branch names
         """
         try:
-            repo_url = self.git_cfg.url
-            if not repo_url:
-                raise UserException("Git repository URL is required")
-
             branches_args = ["git", "ls-remote", "--heads"]
 
-            if self.git_cfg.ssh_keys.keys.encrypted_private and self.git_cfg.encrypted_token:
-                self.git_cfg.encrypted_token = None
-
-            if self.git_cfg.encrypted_token and repo_url.startswith("https://"):
-                repo_url = repo_url.replace("https://", f"https://x-token-auth:{self.git_cfg.encrypted_token}@")
-
-            branches_args.append(repo_url)
+            branches_args.append(self.repo_auth_url or self.git_cfg.url)
 
             process = subprocess.Popen(
                 branches_args,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
-                cwd=self.REPO_PATH,
+                env=self.env,
             )
             stdout, stderr = process.communicate()
 
             if process.returncode != 0:
                 raise UserException(f"Failed to get branches: {stderr.decode()}")
 
-            branches = [line.strip().split("refs/heads")[-1] for line in stdout.decode().splitlines() if line.strip()]
-            return branches
+            branches = [line.strip().split("refs/heads/")[-1] for line in stdout.decode().splitlines() if line.strip()]
+            return [{"value": b, "label": b} for b in branches]
 
         except Exception as e:
             raise UserException(f"Error getting repository branches: {str(e)}") from e
