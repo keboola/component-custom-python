@@ -25,7 +25,9 @@ class GitHandler:
 
         if self.git_cfg.auth == AuthEnum.PAT:
             self._set_up_token_auth()
-        else:
+
+        repo_url = self.git_cfg.url
+        if repo_url.startswith("git@") or repo_url.startswith("ssh://"):
             self._set_up_ssh_command()
 
         # do not ask for credentials when git authentication fails
@@ -44,12 +46,11 @@ class GitHandler:
         logging.info("Git token authentication set up for HTTPS URL.")
 
     def _set_up_ssh_command(self) -> None:
-        if self.git_cfg.auth == AuthEnum.SSH and not self.git_cfg.ssh_keys.keys.encrypted_private:
-            raise UserException("SSH key is required for SSH authentication")
-
-        repo_url = self.git_cfg.url
-        if repo_url.startswith("git@") or repo_url.startswith("ssh://"):
-            logging.warning("SSH URL detected but no ssh_key_path provided. Trying default SSH configuration.")
+        if not self.git_cfg.ssh_keys.keys.encrypted_private:
+            if self.git_cfg.auth == AuthEnum.SSH:
+                raise UserException("SSH key is required for SSH authentication")
+            elif self.git_cfg.auth == AuthEnum.NONE:
+                logging.warning("SSH URL detected but no SSH private key provided. Trying default SSH configuration.")
 
         ssh_command = [
             "ssh",
@@ -85,7 +86,6 @@ class GitHandler:
         """
 
         branch = self.git_cfg.branch or "main"
-
         logging.info("Cloning git repository: %s", self.git_cfg.url)
 
         try:
