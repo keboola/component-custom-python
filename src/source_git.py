@@ -150,3 +150,19 @@ class GitHandler:
 
         except Exception as e:
             raise UserException(f"Error getting repository branches: {str(e)}") from e
+
+    def get_repository_files(self):
+        self.clone_repository()
+
+        files = []
+        for dirpath, _, filenames in os.walk(self.REPO_PATH):
+            if dirpath.startswith(f"{self.REPO_PATH}/.git"):
+                continue
+            for filename in filenames:
+                if not filename.endswith(".py"):
+                    continue
+                path = os.path.join(dirpath, filename)
+                # strip the repository path prefix
+                files.append(path[len(self.REPO_PATH) + 1 :])
+
+        return [{"value": f, "label": f} for f in files]

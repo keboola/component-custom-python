@@ -131,6 +131,15 @@ class Component(ComponentBase):
         git_handler = source_git.GitHandler(self.parameters.git)
         return git_handler.get_repository_branches()
 
+    @sync_action("listFiles")
+    def get_repository_files(self):
+        """
+        Returns a list of branches in the git repository.
+        This method is used to populate the branches dropdown in the UI.
+        """
+        git_handler = source_git.GitHandler(self.parameters.git)
+        return git_handler.get_repository_files()
+
 
 """
 Main entrypoint

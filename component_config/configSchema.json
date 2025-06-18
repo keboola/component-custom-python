@@ -104,17 +104,26 @@
           "propertyOrder": 70,
           "options": {
             "async": {
-              "cache": false,
               "label": "List Branches",
               "action": "listBranches",
-              "autoload": []
+              "autoload": ["git.url"],
+              "cache": false
             }
           }
         },
         "filename": {
           "type": "string",
+          "enum": [],
           "title": "Script Filename",
-          "propertyOrder": 80
+          "propertyOrder": 80,
+          "options": {
+            "async": {
+              "label": "List Files",
+              "action": "listFiles",
+              "autoload": ["git.branch"],
+              "cache": false
+            }
+          }
         },
         "auth": {
           "type": "radio",
