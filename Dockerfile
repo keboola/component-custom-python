@@ -16,13 +16,18 @@ ENV UV_CACHE_DIR="/.cache/uv"
 # Using the same path as venv defined in the base image so we can use all the preinstalled packages
 ENV UV_PROJECT_ENVIRONMENT="/home/default/"
 
-# Run uv sync as uid/gid 1000 so we don't have to chown the /home/default directory with 100k files =-O
-USER 1000:1000
-
 # Add Github SSH host key to known_hosts file
+USER 1000:1000
 RUN mkdir /home/${USERNAME}/.ssh
 COPY .ssh/known_hosts /home/${USERNAME}/.ssh/known_hosts
 
+# Create root's .ssh directory for storing SSH keys when running sync actions
+USER root
+RUN mkdir /root/.ssh
+COPY .ssh/known_hosts /root/.ssh/known_hosts
+
+# Run uv sync as uid/gid 1000 so we don't have to chown the /home/default directory with 100k files =-O
+USER 1000:1000
 WORKDIR /code/
 COPY pyproject.toml .
 COPY uv.lock .
