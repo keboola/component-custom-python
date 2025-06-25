@@ -10,11 +10,11 @@ from configuration import AuthEnum, GitConfiguration
 
 
 class GitHandler:
-    def __init__(self, git_cfg: GitConfiguration):
-        self.REPO_PATH = "repo_clone"
+    REPO_PATH = "repo_clone"
 
+    def __init__(self, git_cfg: GitConfiguration):
         # add path for absolute imports to start at the cloned repository root level
-        sys.path.append(os.path.join(pathlib.Path(__file__).parent.parent, self.REPO_PATH))
+        sys.path.append(os.path.join(pathlib.Path(__file__).parent.parent, GitHandler.REPO_PATH))
 
         self.env = os.environ.copy()
         self.git_cfg = git_cfg
@@ -94,7 +94,7 @@ class GitHandler:
             if branch:
                 clone_args.extend(["--branch", branch])
 
-            clone_args.extend([self.repo_auth_url or self.git_cfg.url, self.REPO_PATH])
+            clone_args.extend([self.repo_auth_url or self.git_cfg.url, GitHandler.REPO_PATH])
 
             process = subprocess.Popen(
                 clone_args,
@@ -112,7 +112,7 @@ class GitHandler:
 
             logging.info("Successfully cloned repository")
 
-            source_dir = os.path.join(os.getcwd(), self.REPO_PATH)
+            source_dir = os.path.join(os.getcwd(), GitHandler.REPO_PATH)
             main_script_path = os.path.join(source_dir, self.git_cfg.filename)
             if not os.path.exists(main_script_path):
                 raise UserException(f"Main script file '{self.git_cfg.filename}' not found in repository")
@@ -155,14 +155,14 @@ class GitHandler:
         self.clone_repository()
 
         files = []
-        for dirpath, _, filenames in os.walk(self.REPO_PATH):
-            if dirpath.startswith(f"{self.REPO_PATH}/.git"):
+        for dirpath, _, filenames in os.walk(GitHandler.REPO_PATH):
+            if dirpath.startswith(f"{GitHandler.REPO_PATH}/.git"):
                 continue
             for filename in filenames:
                 if not filename.endswith(".py"):
                     continue
                 path = os.path.join(dirpath, filename)
                 # strip the repository path prefix
-                files.append(path[len(self.REPO_PATH) + 1 :])
+                files.append(path[len(GitHandler.REPO_PATH) + 1 :])
 
         return [{"value": f, "label": f} for f in files]
