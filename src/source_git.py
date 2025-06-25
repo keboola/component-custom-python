@@ -77,7 +77,7 @@ class GitHandler:
 
         self.env["GIT_SSH_COMMAND"] = " ".join(ssh_command)
 
-    def clone_repository(self):
+    def clone_repository(self, sync_action=False):
         """
         Clone a git repository and return the path to the cloned code.
 
@@ -111,6 +111,11 @@ class GitHandler:
                 raise UserException(f"Failed to clone git repository: {error_msg}")
 
             logging.info("Successfully cloned repository")
+
+            # when cloning for the "list files" sync action, checking for the script file presence doesn't make sense
+            # and could cause problems in cases the repository changed for any reason
+            if sync_action:
+                return None
 
             source_dir = os.path.join(os.getcwd(), GitHandler.REPO_PATH)
             main_script_path = os.path.join(source_dir, self.git_cfg.filename)
@@ -152,7 +157,7 @@ class GitHandler:
             raise UserException(f"Error getting repository branches: {str(e)}") from e
 
     def get_repository_files(self):
-        self.clone_repository()
+        _ = self.clone_repository(sync_action=True)
 
         files = []
         for dirpath, _, filenames in os.walk(GitHandler.REPO_PATH):
