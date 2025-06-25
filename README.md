@@ -32,10 +32,10 @@ The git configuration object supports the following parameters:
 - `url`: Repository URL – supports both HTTPS and SSH formats
 - `branch`: Branch name to checkout – UI provides branch selection
 - `filename`: Python script filename to execute – UI lists available files
-- `auth`: Authentication method
+- `auth`: Repository visibility & authentication method
   - `none`: Public repository, no authentication (default)
-  - `pat`: Private repository using Personal Access Token
-  - `ssh`: Private repository using SSH key
+  - `pat`: Private repository, Personal Access Token
+  - `ssh`: Private repository, SSH key
 - `#token`: Personal Access Token (`"auth": "pat"` only). This value will be encrypted in Keboola Storage.
 - `ssh_keys`: SSH keys configuration object (`"auth": "ssh"` only).
 
