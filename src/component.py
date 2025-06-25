@@ -6,7 +6,6 @@ import json
 import logging
 import os
 import runpy
-import subprocess
 import sys
 import traceback
 from traceback import TracebackException
@@ -15,9 +14,10 @@ import dacite
 from keboola.component.base import ComponentBase, sync_action
 from keboola.component.exceptions import UserException
 
-import source_file
-import source_git
 from configuration import AuthEnum, Configuration, SourceEnum, encrypted_keys
+from package_installer import PackageInstaller
+from source_file import FileHandler
+from source_git import GitHandler
 
 
 class Component(ComponentBase):
@@ -42,14 +42,14 @@ class Component(ComponentBase):
 
     def run(self):
         if self.parameters.source == SourceEnum.CODE:
-            script_path = source_file.FileHandler.prepare_script_file(self.data_folder_path, self.parameters.code)
+            script_path = FileHandler.prepare_script_file(self.data_folder_path, self.parameters.code)
+            PackageInstaller.install_packages(self.parameters.packages)
         else:
-            git_handler = source_git.GitHandler(self.parameters.git)
+            git_handler = GitHandler(self.parameters.git)
             script_path = git_handler.clone_repository()
+            PackageInstaller.install_packages_for_repository(GitHandler.REPO_PATH)
 
         self._merge_user_parameters()
-
-        self.install_packages(self.parameters.packages)
 
         self.execute_script_file(script_path)
 
@@ -86,24 +86,6 @@ class Component(ComponentBase):
         else:
             return script
 
-    @staticmethod
-    def install_packages(packages):
-        for package in packages:
-            logging.info("Installing package: %s...", package)
-            args = [
-                "uv",
-                "add",
-                package,
-            ]
-            process = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            stdout, stderr = process.communicate()
-            process.poll()
-            logging.info("Installation finished: %s. Full log in detail.", package, extra={"full_message": stdout})
-            if process.poll() != 0:
-                raise UserException(f"Failed to install package: {package}. Log in event detail.", stderr)
-            elif stderr:
-                logging.warning(stderr)
-
     def _set_init_logging_handler(self):
         for h in logging.getLogger().handlers:
             h.setFormatter(logging.Formatter("[Non-script message]: %(message)s"))
@@ -128,7 +110,7 @@ class Component(ComponentBase):
         Returns a list of branches in the git repository.
         This method is used to populate the branches dropdown in the UI.
         """
-        git_handler = source_git.GitHandler(self.parameters.git)
+        git_handler = GitHandler(self.parameters.git)
         return git_handler.get_repository_branches()
 
     @sync_action("listFiles")
@@ -137,7 +119,7 @@ class Component(ComponentBase):
         Returns a list of branches in the git repository.
         This method is used to populate the branches dropdown in the UI.
         """
-        git_handler = source_git.GitHandler(self.parameters.git)
+        git_handler = GitHandler(self.parameters.git)
         return git_handler.get_repository_files()
 
 
