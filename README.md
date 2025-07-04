@@ -2,7 +2,7 @@
   - [Configuration](#configuration)
     - [Git configuration](#git-configuration)
     - [SSH configuration](#ssh-configuration)
-    - [Example: Running code saved in custom repository](#example-running-code-saved-in-custom-repository)
+    - [Example: Running code saved in custom repository + template 🧩](#example-running-code-saved-in-custom-repository--template-)
     - [Example: Listing preinstalled packages](#example-listing-preinstalled-packages)
     - [Example: Accessing custom configuration parameters](#example-accessing-custom-configuration-parameters)
   - [Development](#development)
@@ -29,13 +29,13 @@ This component lets you run your own Python code directly within Keboola, with s
 
 The git configuration object supports the following parameters:
 
-- `url`: Repository URL – supports both HTTPS and SSH formats
-- `branch`: Branch name to checkout – UI provides branch selection
-- `filename`: Python script filename to execute – UI lists available files
-- `auth`: Repository visibility & authentication method
-  - `none`: Public repository, no authentication (default)
-  - `pat`: Private repository, Personal Access Token
-  - `ssh`: Private repository, SSH key
+- `url`: Repository URL – supports both HTTPS and SSH formats.
+- `branch`: Branch name to checkout – UI provides branch selection.
+- `filename`: Python script filename to execute – UI lists available files.
+- `auth`: Repository visibility & authentication method.
+  - `none`: Public repository, no authentication (default).
+  - `pat`: Private repository, Personal Access Token.
+  - `ssh`: Private repository, SSH key.
 - `#token`: Personal Access Token (`"auth": "pat"` only). This value will be encrypted in Keboola Storage.
 - `ssh_keys`: SSH keys configuration object (`"auth": "ssh"` only).
 
@@ -47,7 +47,10 @@ The git configuration object supports the following parameters:
   - `#private`: Private key used for authentication. This value will be encrypted in Keboola Storage.
 
 
-### Example: Running code saved in custom repository
+### Example: Running code saved in custom repository + template 🧩
+
+As this might become a preferred way of running custom Python code in Keboola for many, we prepared a [simple example project](https://github.com/keboola/component-custom-python-example-repo-1), which help you with your first steps (and can also server you as a template for any of your future projects).
+
 
 Contents of the `config.json` file:
 
