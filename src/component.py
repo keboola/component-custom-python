@@ -14,7 +14,7 @@ import dacite
 from keboola.component.base import ComponentBase, sync_action
 from keboola.component.exceptions import UserException
 
-from configuration import AuthEnum, Configuration, PyEnum, SourceEnum, encrypted_keys
+from configuration import AuthEnum, Configuration, VenvEnum, SourceEnum, encrypted_keys
 from package_installer import PackageInstaller
 from source_file import FileHandler
 from source_git import GitHandler
@@ -40,7 +40,7 @@ class Component(ComponentBase):
             Configuration,
             self.configuration.parameters,
             config=dacite.Config(
-                cast=[AuthEnum, PyEnum, SourceEnum],
+                cast=[AuthEnum, SourceEnum, VenvEnum],
                 convert_key=encrypted_keys,
             ),
         )
@@ -54,11 +54,11 @@ class Component(ComponentBase):
             git_handler = GitHandler(self.parameters.git)
             script_filename = git_handler.clone_repository()
 
-        if not self.parameters.venv.isolated:
+        if self.parameters.venv == VenvEnum.BASE:
             logging.info("Using base image environment")
         else:
-            logging.info("Creating new Python %s virtual environment", self.parameters.venv.python.value)
-            venv_path = VenvManager.prepare_venv(self.parameters.venv.python, base_path)
+            logging.info("Creating new Python %s virtual environment", self.parameters.venv.value)
+            venv_path = VenvManager.prepare_venv(self.parameters.venv.value, base_path)
             os.environ["UV_PROJECT_ENVIRONMENT"] = str(venv_path)
             os.environ["VIRTUAL_ENV"] = str(venv_path)
 

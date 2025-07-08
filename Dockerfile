@@ -13,6 +13,11 @@ RUN mkdir -p /.cache/uv
 RUN chown -R 1000:1000 /.cache
 ENV UV_CACHE_DIR="/.cache/uv"
 
+# Preinstall Python versions
+RUN uv python install 3.12
+RUN uv python install 3.13
+RUN uv python install 3.14
+
 # Using the same path as venv defined in the base image so we can use all the preinstalled packages
 ENV UV_PROJECT_ENVIRONMENT="/home/default/"
 
