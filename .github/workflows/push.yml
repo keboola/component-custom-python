@@ -11,8 +11,8 @@ on:
 concurrency: ci-${{ github.ref }} # to avoid tag collisions in the ECR
 env:
   # repository variables:
-  KBC_DEVELOPERPORTAL_APP: "kds-team.app-custom-python-test" # replace with your component id
-  KBC_DEVELOPERPORTAL_VENDOR: "kds-team" # replace with your vendor
+  KBC_DEVELOPERPORTAL_APP: "kds-team.app-custom-python-test"
+  KBC_DEVELOPERPORTAL_VENDOR: "kds-team"
   DOCKERHUB_USER: ${{ secrets.DOCKERHUB_USER }}
   KBC_DEVELOPERPORTAL_USERNAME: "kds-team+github"
 
@@ -65,7 +65,7 @@ jobs:
       - name: Set image tag
         id: tag
         run: |
-          TAG="${GITHUB_REF##*/}-${{ github.run_number }}"
+          TAG="${GITHUB_REF##*/}"
           IS_SEMANTIC_TAG=$(echo "$TAG" | grep -q '^v\?[0-9]\+\.[0-9]\+\.[0-9]\+$' && echo true || echo false)
           echo "is_semantic_tag=$IS_SEMANTIC_TAG" | tee -a $GITHUB_OUTPUT
           echo "app_image_tag=$TAG" | tee -a $GITHUB_OUTPUT
