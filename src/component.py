@@ -80,7 +80,7 @@ class Component(ComponentBase):
             with open(file_path) as file:
                 script = file.read()
             logging.info("Executing script:\n%s", self.script_excerpt(script))
-            args = ["uv", "run", file_path.name]
+            args = ["uv", "run", str(file_path)]
             SubprocessRunner.run(args, "Script executed successfully.", "Script execution failed.")
         except Exception as err:
             _, _, tb = sys.exc_info()
