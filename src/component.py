@@ -5,19 +5,21 @@ Template Component main class.
 import json
 import logging
 import os
-import runpy
 import sys
 import traceback
+from pathlib import Path
 from traceback import TracebackException
 
 import dacite
 from keboola.component.base import ComponentBase, sync_action
 from keboola.component.exceptions import UserException
 
-from configuration import AuthEnum, Configuration, SourceEnum, encrypted_keys
+from configuration import AuthEnum, Configuration, PyEnum, SourceEnum, encrypted_keys
 from package_installer import PackageInstaller
 from source_file import FileHandler
 from source_git import GitHandler
+from subprocess_runner import SubprocessRunner
+from venv_manager import VenvManager
 
 
 class Component(ComponentBase):
@@ -37,23 +39,39 @@ class Component(ComponentBase):
         self.parameters = dacite.from_dict(
             Configuration,
             self.configuration.parameters,
-            config=dacite.Config(cast=[AuthEnum, SourceEnum], convert_key=encrypted_keys),
+            config=dacite.Config(
+                cast=[AuthEnum, PyEnum, SourceEnum],
+                convert_key=encrypted_keys,
+            ),
         )
 
     def run(self):
         if self.parameters.source == SourceEnum.CODE:
-            script_path = FileHandler.prepare_script_file(self.data_folder_path, self.parameters.code)
+            base_path = Path(self.data_folder_path)
+            script_filename = FileHandler.prepare_script_file(self.data_folder_path, self.parameters.code)
+        else:
+            base_path = Path(GitHandler.REPO_PATH)
+            git_handler = GitHandler(self.parameters.git)
+            script_filename = git_handler.clone_repository()
+
+        if not self.parameters.venv.isolated:
+            logging.info("Using base image environment")
+        else:
+            logging.info("Creating new Python %s virtual environment", self.parameters.venv.python.value)
+            venv_path = VenvManager.prepare_venv(self.parameters.venv.python, base_path)
+            os.environ["UV_PROJECT_ENVIRONMENT"] = str(venv_path)
+            os.environ["VIRTUAL_ENV"] = str(venv_path)
+
+        if self.parameters.source == SourceEnum.CODE:
             PackageInstaller.install_packages(self.parameters.packages)
         else:
-            git_handler = GitHandler(self.parameters.git)
-            script_path = git_handler.clone_repository()
             PackageInstaller.install_packages_for_repository(GitHandler.REPO_PATH)
 
         self._merge_user_parameters()
 
-        self.execute_script_file(script_path)
+        self.execute_script_file(script_filename)
 
-    def execute_script_file(self, file_path):
+    def execute_script_file(self, file_path: Path):
         # Change current working directory so that relative paths work
         os.chdir(self.data_folder_path)
         sys.path.append(self.data_folder_path)
@@ -62,8 +80,8 @@ class Component(ComponentBase):
             with open(file_path) as file:
                 script = file.read()
             logging.info("Executing script:\n%s", self.script_excerpt(script))
-            runpy.run_path(file_path)
-            logging.info("Script finished successfully.")
+            args = ["uv", "run", file_path.name]
+            SubprocessRunner.run(args, "Script executed successfully.", "Script execution failed.")
         except Exception as err:
             _, _, tb = sys.exc_info()
             stack_len = len(traceback.extract_tb(tb)[4:])
@@ -101,7 +119,7 @@ class Component(ComponentBase):
 
         # build config data and overwrite for the user script
         config_data["parameters"] = self.parameters.user_properties
-        with open(os.path.join(self.data_folder_path, "config.json"), "w+") as inp:
+        with open(Path(self.data_folder_path) / "config.json", "w+") as inp:
             json.dump(config_data, inp)
 
     @sync_action("listBranches")

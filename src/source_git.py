@@ -1,8 +1,8 @@
 import logging
 import os
-import pathlib
 import subprocess
 import sys
+from pathlib import Path
 
 from keboola.component.exceptions import UserException
 
@@ -14,7 +14,7 @@ class GitHandler:
 
     def __init__(self, git_cfg: GitConfiguration):
         # add path for absolute imports to start at the cloned repository root level
-        sys.path.append(os.path.join(pathlib.Path(__file__).parent.parent, GitHandler.REPO_PATH))
+        sys.path.append(str(Path(__file__).parent.parent / GitHandler.REPO_PATH))
 
         self.env = os.environ.copy()
         self.git_cfg = git_cfg
@@ -67,17 +67,17 @@ class GitHandler:
         ]
 
         if self.git_cfg.ssh_keys.keys.encrypted_private:
-            ssh_key_path = os.path.expanduser("~/.ssh/github_private_key")
+            ssh_key_path = Path("~/.ssh/github_private_key").expanduser()
             with open(ssh_key_path, "wb") as f:
                 for line in self.git_cfg.ssh_keys.keys.encrypted_private.splitlines():
                     f.write(line.encode() + b"\n")
             # ensure SSH key has correct permissions
             os.chmod(ssh_key_path, 0o600)
-            ssh_command.extend(["-i", ssh_key_path])
+            ssh_command.extend(["-i", str(ssh_key_path)])
 
         self.env["GIT_SSH_COMMAND"] = " ".join(ssh_command)
 
-    def clone_repository(self, sync_action=False):
+    def clone_repository(self, sync_action=False) -> Path:
         """
         Clone a git repository and return the path to the cloned code.
 
@@ -115,11 +115,11 @@ class GitHandler:
             # when cloning for the "list files" sync action, checking for the script file presence doesn't make sense
             # and could cause problems in cases the repository changed for any reason
             if sync_action:
-                return None
+                return Path()
 
-            source_dir = os.path.join(os.getcwd(), GitHandler.REPO_PATH)
-            main_script_path = os.path.join(source_dir, self.git_cfg.filename)
-            if not os.path.exists(main_script_path):
+            source_dir = Path.cwd() / GitHandler.REPO_PATH
+            main_script_path = Path(source_dir) / self.git_cfg.filename
+            if not main_script_path.is_file():
                 raise UserException(f"Main script file '{self.git_cfg.filename}' not found in repository")
 
             return main_script_path
@@ -166,7 +166,7 @@ class GitHandler:
             for filename in filenames:
                 if not filename.endswith(".py"):
                     continue
-                path = os.path.join(dirpath, filename)
+                path = str(Path(dirpath) / filename)
                 # strip the repository path prefix
                 files.append(path[len(GitHandler.REPO_PATH) + 1 :])
 

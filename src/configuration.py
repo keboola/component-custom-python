@@ -12,6 +12,12 @@ class SourceEnum(Enum):
     GIT = "git"
 
 
+class PyEnum(Enum):
+    PY_3_12 = "3.12"
+    PY_3_13 = "3.13"
+    PY_3_14 = "3.14"
+
+
 class AuthEnum(Enum):
     NONE = "none"
     PAT = "pat"
@@ -31,6 +37,12 @@ class SSHKeysConfiguration:
 
 
 @dataclass
+class VenvConfiguration:
+    isolated: bool = False
+    python: PyEnum = PyEnum.PY_3_13  # only takes effect if clean is True
+
+
+@dataclass
 class GitConfiguration:
     url: str = ""
     branch: str = "main"
@@ -43,7 +55,8 @@ class GitConfiguration:
 @dataclass
 class Configuration:
     source: SourceEnum = SourceEnum.CODE
-    packages: list[str] = field(default_factory=list)
     user_properties: dict[str, object] = field(default_factory=dict)
+    venv: VenvConfiguration = field(default_factory=VenvConfiguration)
+    packages: list[str] = field(default_factory=list)
     code: str = ""
     git: GitConfiguration = field(default_factory=GitConfiguration)

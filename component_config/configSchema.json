@@ -25,10 +25,60 @@
         }
       }
     },
+    "venv": {
+      "type": "object",
+      "title": "Runtime Configuration",
+      "propertyOrder": 20,
+      "required": [
+        "isolated",
+        "python"
+      ],
+      "properties": {
+        "clean": {
+          "type": "radio",
+          "title": "Isolated Python Environment",
+          "propertyOrder": 30,
+          "enum": [
+            false,
+            true
+          ],
+          "options": {
+            "tooltip": "Isolated environment takes a couple of seconds to start, but gives you the opportuninty to pick one of the latest versions of Python. It's also a safer choice as it prevents package collisions.\n\n.Non-isolated environment (used to be the default choice) might start a bit faster, but can lead to issues mentioned above.",
+            "enum_titles": [
+              "No (Python 3.10, contains all the pre-installed packages)",
+              "Yes (Python version based on your choice, just the packages)"
+            ]
+          },
+          "default": true,
+          "required": false
+        },
+        "python": {
+          "type": "radio",
+          "title": "Python Version",
+          "propertyOrder": 30,
+          "enum": [
+            "3.12",
+            "3.13",
+            "3.14"
+          ],
+          "options": {
+            "tooltip": "3.12 (Oct 2023, security fixes until Oct 2028)\n3.13 (Oct 2024, security fixes until Oct 2029)\n3.14 (beta, Oct 2025, security fixes until Oct 2030)",
+            "enum_titles": [
+            "3.12",
+            "3.13",
+            "3.14 (beta)"
+            ]
+          },
+          "default": "3.13",
+          "required": false
+        }
+
+      }
+    },
     "source": {
       "type": "radio",
       "title": "Source Code & Dependencies",
-      "propertyOrder": 20,
+      "propertyOrder": 30,
       "enum": [
         "code",
         "git"
@@ -50,7 +100,7 @@
       },
       "title": "Python Packages",
       "format": "select",
-      "propertyOrder": 30,
+      "propertyOrder": 40,
       "options": {
         "dependencies": {
           "source": "code"
@@ -64,7 +114,7 @@
       "type": "string",
       "title": "Python Code",
       "format": "editor",
-      "propertyOrder": 40,
+      "propertyOrder": 50,
       "default": "from keboola.component import CommonInterface\n\nci = CommonInterface()\n# access user parameters\nprint(ci.configuration.parameters)",
       "options": {
         "dependencies": {
@@ -80,7 +130,7 @@
     "git": {
       "type": "object",
       "title": "Git Repository Source Settings",
-      "propertyOrder": 50,
+      "propertyOrder": 60,
       "options": {
         "dependencies": {
           "source": "git"
@@ -95,18 +145,20 @@
         "url": {
           "type": "string",
           "title": "Repository URL",
-          "propertyOrder": 60
+          "propertyOrder": 70
         },
         "branch": {
           "type": "string",
           "enum": [],
           "title": "Branch Name",
-          "propertyOrder": 70,
+          "propertyOrder": 80,
           "options": {
             "async": {
               "label": "List Branches",
               "action": "listBranches",
-              "autoload": ["git.url"],
+              "autoload": [
+                "git.url"
+              ],
               "cache": false
             }
           }
@@ -115,12 +167,14 @@
           "type": "string",
           "enum": [],
           "title": "Script Filename",
-          "propertyOrder": 80,
+          "propertyOrder": 90,
           "options": {
             "async": {
               "label": "List Files",
               "action": "listFiles",
-              "autoload": ["git.branch"],
+              "autoload": [
+                "git.branch"
+              ],
               "cache": false
             }
           }
@@ -128,7 +182,7 @@
         "auth": {
           "type": "radio",
           "title": "Repository Visibility & Authentication",
-          "propertyOrder": 90,
+          "propertyOrder": 100,
           "enum": [
             "none",
             "pat",
@@ -147,7 +201,7 @@
         "#token": {
           "type": "string",
           "title": "Personal Access Token",
-          "propertyOrder": 100,
+          "propertyOrder": 110,
           "options": {
             "dependencies": {
               "auth": "pat"
@@ -157,7 +211,7 @@
         "ssh_keys": {
           "type": "object",
           "format": "ssh-editor",
-          "propertyOrder": 110,
+          "propertyOrder": 120,
           "options": {
             "only_keys": true,
             "dependencies": {
