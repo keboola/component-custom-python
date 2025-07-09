@@ -14,7 +14,7 @@ import dacite
 from keboola.component.base import ComponentBase, sync_action
 from keboola.component.exceptions import UserException
 
-from configuration import AuthEnum, Configuration, VenvEnum, SourceEnum, encrypted_keys
+from configuration import AuthEnum, Configuration, SourceEnum, VenvEnum, encrypted_keys
 from package_installer import PackageInstaller
 from source_file import FileHandler
 from source_git import GitHandler
@@ -50,7 +50,7 @@ class Component(ComponentBase):
             base_path = Path(self.data_folder_path)
             script_filename = FileHandler.prepare_script_file(self.data_folder_path, self.parameters.code)
         else:
-            base_path = Path(GitHandler.REPO_PATH)
+            base_path = Path(GitHandler.REPO_PATH).absolute()
             git_handler = GitHandler(self.parameters.git)
             script_filename = git_handler.clone_repository()
 
@@ -59,13 +59,14 @@ class Component(ComponentBase):
         else:
             logging.info("Creating new Python %s virtual environment", self.parameters.venv.value)
             venv_path = VenvManager.prepare_venv(self.parameters.venv.value, base_path)
+            logging.info("Virtual environment created at %s", venv_path)
             os.environ["UV_PROJECT_ENVIRONMENT"] = str(venv_path)
             os.environ["VIRTUAL_ENV"] = str(venv_path)
 
         if self.parameters.source == SourceEnum.CODE:
             PackageInstaller.install_packages(self.parameters.packages)
         else:
-            PackageInstaller.install_packages_for_repository(GitHandler.REPO_PATH)
+            PackageInstaller.install_packages_for_repository(base_path)
 
         self._merge_user_parameters()
 
