@@ -51,7 +51,7 @@ class GitConfiguration:
 class Configuration:
     source: SourceEnum = SourceEnum.CODE
     user_properties: dict[str, object] = field(default_factory=dict)
-    venv: VenvEnum = VenvEnum.PY_3_13
+    venv: VenvEnum = VenvEnum.BASE
     packages: list[str] = field(default_factory=list)
     code: str = ""
     git: GitConfiguration = field(default_factory=GitConfiguration)
