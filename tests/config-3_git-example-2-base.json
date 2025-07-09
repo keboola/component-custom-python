@@ -1,0 +1,18 @@
+{
+  "parameters": {
+    "source": "git",
+    "git": {
+      "url": "https://github.com/keboola/component-custom-python-example-repo-2.git",
+      "auth": "none",
+      "branch": "main",
+      "filename": "src/main.py"
+    },
+    "user_properties": {
+      "debug": true,
+      "rectangle_a": 3.0,
+      "rectangle_b": 4.0,
+      "endpoint": "https://www.example.com"
+    },
+    "venv": "base"
+  }
+}

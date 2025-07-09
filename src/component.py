@@ -107,7 +107,12 @@ class Component(ComponentBase):
 
     def _set_init_logging_handler(self):
         for h in logging.getLogger().handlers:
-            h.setFormatter(logging.Formatter("[Non-script message]: %(message)s"))
+            h.setFormatter(
+                logging.Formatter(
+                    fmt="[%(asctime)s - %(filename)s:%(lineno)d - %(levelname)s] %(message)s",
+                    datefmt="%Y-%m-%d %H:%M:%S",
+                )
+            )
 
     def _merge_user_parameters(self):
         """
