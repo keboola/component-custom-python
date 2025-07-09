@@ -13,18 +13,20 @@ RUN mkdir -p /.cache/uv
 RUN chown -R 1000:1000 /.cache
 ENV UV_CACHE_DIR="/.cache/uv"
 
-# Preinstall Python versions
+# Using the same path as venv defined in the base image so we can use all the preinstalled packages
+ENV UV_PROJECT_ENVIRONMENT="/home/default/"
+
+# Preinstall other Python versions for creating isolated virtual environments
+USER 1000:1000
 RUN uv python install 3.12
 RUN uv python install 3.13
 RUN uv python install 3.14
 
-# Using the same path as venv defined in the base image so we can use all the preinstalled packages
-ENV UV_PROJECT_ENVIRONMENT="/home/default/"
-
-# Add Github SSH host key to known_hosts file
+# Add Github SSH host key to known_hosts file & create .bash_aliases for convenience when debugging
 USER 1000:1000
 RUN mkdir /home/${USERNAME}/.ssh
 COPY .ssh/known_hosts /home/${USERNAME}/.ssh/known_hosts
+RUN echo "alias l='ls -Al --group-directories-first'" >> /home/${USERNAME}/.bash_aliases
 
 # Create root's .ssh directory for storing SSH keys when running sync actions
 USER root
