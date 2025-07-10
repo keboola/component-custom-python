@@ -25,10 +25,9 @@ class SubprocessRunner:
 
         process.poll()
         if process.poll() != 0:
-            message = stderr.decode() if stderr else "Unknown installation error"
-            raise UserException(f"{err_message} Log in event detail.", message)
+            stderr_str = stderr.decode() if stderr else "Unknown error."
+            raise UserException(f"{err_message} Log in event detail.", stderr_str)
         elif stderr:
-            message = stderr.decode() if stderr else "uv output empty."
-            logging.info("%s Full log in detail.", ok_message, extra={"full_message": message})
+            logging.info("%s Full log in detail.", ok_message, extra={"full_message": stderr.decode()})
         else:
             logging.info(ok_message)
