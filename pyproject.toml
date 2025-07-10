@@ -1,10 +1,10 @@
 [project]
 name = "custom-python"
-version = "0.1.0"
-description = "Add your description here"
+dynamic = ["version"]
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
+    "dacite>=1.9.2",
     "keboola-component>=1.6.10",
 ]
 

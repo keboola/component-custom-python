@@ -5,23 +5,21 @@ Template Component main class.
 import json
 import logging
 import os
-import runpy
-import subprocess
 import sys
 import traceback
+from pathlib import Path
 from traceback import TracebackException
 
-from keboola.component.base import ComponentBase
+import dacite
+from keboola.component.base import ComponentBase, sync_action
 from keboola.component.exceptions import UserException
 
-# configuration variables
-KEY_API_TOKEN = "#api_token"
-KEY_PRINT_HELLO = "print_hello"
-
-# list of mandatory parameters => if some is missing,
-# component will fail with readable message on initialization.
-REQUIRED_PARAMETERS = [KEY_PRINT_HELLO]
-REQUIRED_IMAGE_PARS = []
+from configuration import AuthEnum, Configuration, SourceEnum, VenvEnum, encrypted_keys
+from package_installer import PackageInstaller
+from source_file import FileHandler
+from source_git import GitHandler
+from subprocess_runner import SubprocessRunner
+from venv_manager import VenvManager
 
 
 class Component(ComponentBase):
@@ -37,27 +35,44 @@ class Component(ComponentBase):
 
     def __init__(self):
         super().__init__()
+        self._set_init_logging_handler()
+        self.parameters = dacite.from_dict(
+            Configuration,
+            self.configuration.parameters,
+            config=dacite.Config(
+                cast=[AuthEnum, SourceEnum, VenvEnum],
+                convert_key=encrypted_keys,
+            ),
+        )
 
     def run(self):
-        parameters = self.configuration.parameters
+        if self.parameters.source == SourceEnum.CODE:
+            base_path = Path(self.data_folder_path)
+            script_filename = FileHandler.prepare_script_file(self.data_folder_path, self.parameters.code)
+        else:
+            base_path = Path(GitHandler.REPO_PATH).absolute()
+            git_handler = GitHandler(self.parameters.git)
+            script_filename = git_handler.clone_repository()
 
-        self._set_init_logging_handler()
-        script_path = os.path.join(self.data_folder_path, "script.py")
-        self.prepare_script_file(script_path)
+        if self.parameters.venv == VenvEnum.BASE:
+            logging.info("Using base image environment")
+        else:
+            logging.info("Creating new Python %s virtual environment", self.parameters.venv.value)
+            venv_path = VenvManager.prepare_venv(self.parameters.venv.value, base_path)
+            logging.info("Virtual environment created at %s", venv_path)
+            os.environ["UV_PROJECT_ENVIRONMENT"] = str(venv_path)
+            os.environ["VIRTUAL_ENV"] = str(venv_path)
+
+        if self.parameters.source == SourceEnum.CODE:
+            PackageInstaller.install_packages(self.parameters.packages)
+        else:
+            PackageInstaller.install_packages_for_repository(base_path)
 
         self._merge_user_parameters()
 
-        # install packages
-        self.install_packages(parameters.get("packages", []))
+        self.execute_script_file(script_filename)
 
-        self.execute_script_file(script_path)
-
-    def prepare_script_file(self, destination_path: str):
-        script = self.configuration.parameters["code"]
-        with open(destination_path, "w+") as file:
-            file.write(script)
-
-    def execute_script_file(self, file_path):
+    def execute_script_file(self, file_path: Path):
         # Change current working directory so that relative paths work
         os.chdir(self.data_folder_path)
         sys.path.append(self.data_folder_path)
@@ -65,9 +80,9 @@ class Component(ComponentBase):
         try:
             with open(file_path) as file:
                 script = file.read()
-            logging.debug('Executing script "%s"', self.script_excerpt(script))
-            runpy.run_path(file_path)
-            logging.info("Script finished")
+            logging.info("Executing script:\n%s", self.script_excerpt(script))
+            args = ["uv", "run", str(file_path)]
+            SubprocessRunner.run(args, "Script executed successfully.", "Script execution failed.")
         except Exception as err:
             _, _, tb = sys.exc_info()
             stack_len = len(traceback.extract_tb(tb)[4:])
@@ -85,32 +100,19 @@ class Component(ComponentBase):
 
     @staticmethod
     def script_excerpt(script):
-        if len(script) > 1000:
-            return script[0:500] + "\n...\n" + script[-500]
+        if len(script) > 640:
+            return script[:256] + "\n...\n" + script[-256:]
         else:
             return script
 
-    @staticmethod
-    def install_packages(packages):
-        for package in packages:
-            logging.info("Installing package: %s...", package)
-            args = [
-                "uv",
-                "add",
-                package,
-            ]
-            process = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            stdout, stderr = process.communicate()
-            process.poll()
-            logging.info("Installation finished: %s. Full log in detail.", package, extra={"full_message": stdout})
-            if process.poll() != 0:
-                raise UserException(f"Failed to install package: {package}. Log in event detail.", stderr)
-            elif stderr:
-                logging.warning(stderr)
-
     def _set_init_logging_handler(self):
         for h in logging.getLogger().handlers:
-            h.setFormatter(logging.Formatter("[Non-script message]: %(message)s"))
+            h.setFormatter(
+                logging.Formatter(
+                    fmt="[%(asctime)s - %(filename)s:%(lineno)d - %(levelname)s] %(message)s",
+                    datefmt="%Y-%m-%d %H:%M:%S",
+                )
+            )
 
     def _merge_user_parameters(self):
         """
@@ -122,9 +124,27 @@ class Component(ComponentBase):
         config_data = self.configuration.config_data.copy()
 
         # build config data and overwrite for the user script
-        config_data["parameters"] = self.configuration.parameters.get("user_properties", {})
-        with open(os.path.join(self.data_folder_path, "config.json"), "w+") as inp:
+        config_data["parameters"] = self.parameters.user_properties
+        with open(Path(self.data_folder_path) / "config.json", "w+") as inp:
             json.dump(config_data, inp)
+
+    @sync_action("listBranches")
+    def get_repository_branches(self):
+        """
+        Returns a list of branches in the git repository.
+        This method is used to populate the branches dropdown in the UI.
+        """
+        git_handler = GitHandler(self.parameters.git)
+        return git_handler.get_repository_branches()
+
+    @sync_action("listFiles")
+    def get_repository_files(self):
+        """
+        Returns a list of branches in the git repository.
+        This method is used to populate the branches dropdown in the UI.
+        """
+        git_handler = GitHandler(self.parameters.git)
+        return git_handler.get_repository_files()
 
 
 """

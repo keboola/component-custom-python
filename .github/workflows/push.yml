@@ -11,8 +11,8 @@ on:
 concurrency: ci-${{ github.ref }} # to avoid tag collisions in the ECR
 env:
   # repository variables:
-  KBC_DEVELOPERPORTAL_APP: "kds-team.app-custom-python" # replace with your component id
-  KBC_DEVELOPERPORTAL_VENDOR: "kds-team" # replace with your vendor
+  KBC_DEVELOPERPORTAL_APP: "kds-team.app-custom-python"
+  KBC_DEVELOPERPORTAL_VENDOR: "kds-team"
   DOCKERHUB_USER: ${{ secrets.DOCKERHUB_USER }}
   KBC_DEVELOPERPORTAL_USERNAME: "kds-team+github"
 

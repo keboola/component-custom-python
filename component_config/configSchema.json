@@ -7,51 +7,191 @@
     "packages"
   ],
   "properties": {
-    "code": {
-      "type": "string",
-      "title": "Python code",
-      "format": "editor",
-      "default": "from keboola.component import CommonInterface\n\nci = CommonInterface()\n# access user parameters\nprint(ci.configuration.parameters)",
-      "options": {
-        "editor": {
-          "mode": "text/x-python",
-          "lineNumbers": true,
-          "input_height": "100px"
-        }
-      },
-      "propertyOrder": 10
-    },
-    "packages": {
-      "type": "array",
-      "items": {
-        "type": "string"
-      },
-      "title": "Python packages",
-      "format": "select",
-      "options": {
-        "tags": true
-      },
-      "description": "Learn more about package installation, usage, and the list of pre-installed packages in our <a href=\"https://help.keboola.com/transformations/\">documentation</a>.",
-      "uniqueItems": true,
-      "propertyOrder": 1
-    },
     "user_properties": {
       "type": "object",
       "title": "User Parameters",
       "format": "editor",
+      "propertyOrder": 10,
       "default": {
         "debug": false
       },
       "options": {
+        "tooltip": "User parameters will be inserted in the `/data/config.json` file. They can be accessed in the code via `keboola.component.CommonInterface`, see an example in the documentation or when creating a new configuration.",
         "editor": {
           "lint": true,
           "mode": "application/json",
           "lineNumbers": true,
           "input_height": "100px"
         }
+      }
+    },
+    "venv": {
+      "enum": [
+        "base",
+        "3.12",
+        "3.13",
+        "3.14"
+      ],
+      "type": "string",
+      "title": "Python Version & Environment Isolation",
+      "default": "3.13",
+      "options": {
+        "tooltip": "- Isolated environment takes a couple of seconds to start, but gives you the opportuninty to pick one of the latest versions of Python. It's also a safer choice as it prevents package collisions.\n- Non-isolated environment (used to be the default choice) might start a bit faster, but can lead to issues mentioned above.",
+        "enum_titles": [
+          "Python 3.10 – Shared environment (contains many pre-installed packages in legacy versions)",
+          "Python 3.12 – Isolated environment (just the packages of your choice)",
+          "Python 3.13 – Isolated environment (just the packages of your choice)",
+          "Python 3.14 beta – Isolated environment (just the packages of your choice)"
+        ]
       },
-      "description": "User parameters are accessible, and the result will be injected into the standard data/config.json parameters property, as in any other component.",
-      "propertyOrder": 1
+      "required": false,
+      "propertyOrder": 30
+    },
+    "source": {
+      "type": "radio",
+      "title": "Source Code & Dependencies",
+      "propertyOrder": 30,
+      "enum": [
+        "code",
+        "git"
+      ],
+      "options": {
+        "tooltip": "If you choose to provide the code to be ran via Git repository, any custom packages to be installed have to be specified:\n\n- in a **pyproject.toml** file accompanied with its corresponding **uv.lock file** (the modern way), or\n- in a **requirements.txt** file (the old way).\n\nThese files need to be present in the root folder of your repository. When all the aforementioned files are present, the modern way takes precedence.",
+        "enum_titles": [
+          "Enter manually into text areas below",
+          "Get from Git repository"
+        ]
+      },
+      "default": "code",
+      "required": false
+    },
+    "packages": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "title": "Python Packages",
+      "format": "select",
+      "propertyOrder": 40,
+      "options": {
+        "dependencies": {
+          "source": "code"
+        },
+        "tags": true
+      },
+      "description": "Learn more about package installation, usage, and the list of pre-installed packages in our <a href=\"https://help.keboola.com/transformations/\">documentation</a>.",
+      "uniqueItems": true
+    },
+    "code": {
+      "type": "string",
+      "title": "Python Code",
+      "format": "editor",
+      "propertyOrder": 50,
+      "default": "from keboola.component import CommonInterface\n\nci = CommonInterface()\n# access user parameters\nprint(ci.configuration.parameters)",
+      "options": {
+        "dependencies": {
+          "source": "code"
+        },
+        "editor": {
+          "mode": "text/x-python",
+          "lineNumbers": true,
+          "input_height": "100px"
+        }
+      }
+    },
+    "git": {
+      "type": "object",
+      "title": "Git Repository Source Settings",
+      "propertyOrder": 60,
+      "options": {
+        "dependencies": {
+          "source": "git"
+        }
+      },
+      "required": [
+        "url",
+        "branch",
+        "filename"
+      ],
+      "properties": {
+        "url": {
+          "type": "string",
+          "title": "Repository URL",
+          "propertyOrder": 70
+        },
+        "branch": {
+          "type": "string",
+          "enum": [],
+          "title": "Branch Name",
+          "propertyOrder": 80,
+          "options": {
+            "async": {
+              "label": "List Branches",
+              "action": "listBranches",
+              "autoload": [
+                "git.url"
+              ],
+              "cache": false
+            }
+          }
+        },
+        "filename": {
+          "type": "string",
+          "enum": [],
+          "title": "Script Filename",
+          "propertyOrder": 90,
+          "options": {
+            "async": {
+              "label": "List Files",
+              "action": "listFiles",
+              "autoload": [
+                "git.branch"
+              ],
+              "cache": false
+            }
+          }
+        },
+        "auth": {
+          "type": "radio",
+          "title": "Repository Visibility & Authentication",
+          "propertyOrder": 100,
+          "enum": [
+            "none",
+            "pat",
+            "ssh"
+          ],
+          "options": {
+            "enum_titles": [
+              "Public – None",
+              "Private – Personal Access Token",
+              "Private – SSH Key"
+            ]
+          },
+          "default": "none",
+          "required": false
+        },
+        "#token": {
+          "type": "string",
+          "title": "Personal Access Token",
+          "propertyOrder": 110,
+          "options": {
+            "dependencies": {
+              "auth": "pat"
+            }
+          }
+        },
+        "ssh_keys": {
+          "type": "object",
+          "format": "ssh-editor",
+          "propertyOrder": 120,
+          "options": {
+            "only_keys": true,
+            "dependencies": {
+              "auth": "ssh"
+            }
+          }
+        }
+      }
     }
   }
 }
