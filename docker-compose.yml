@@ -3,18 +3,18 @@ services:
   dev:
     build: .
     volumes:
-        - ./:/code
-        - ./data:/data
-    environment:
-      - KBC_DATADIR=/data
-  test:
-    # Use to run flake8 and unittests checks
-    build: .
-    volumes:
-      - ./:/code
       - ./data:/data
     environment:
-      - KBC_DATADIR=./data
+      - KBC_DATADIR=/data
+
+  # use to run flake8 and unittests checks
+  test:
+    build: .
+    user: 1000:1000
+    volumes:
+      - ./data:/data
+    environment:
+      - KBC_DATADIR=/data
     command:
       - /bin/sh
       - /code/scripts/build_n_test.sh
