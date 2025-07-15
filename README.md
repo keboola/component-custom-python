@@ -20,6 +20,9 @@ This component lets you run your own Python code directly within Keboola, with s
   - `code`: Custom code entered in a text field (default).
   - `git`: Custom repository.
 - `user_properties`: Object containing custom configuration parameters. The key names prefixed with `#` will be encrypted upon saving.
+- `venv`: String with one of the following values:
+  - `3.12`, `3.13` (default), `3.14` – Run your code in an isolated environment containing just the packages of your choice and the respective Python version.
+  - `base` – Run your code in a shared environment (contains many pre-installed packages in legacy versions)
 - `git`: Object containing configuration of the git repository, which shall be cloned and run (`"source": "git"` only).
 - `code`: JSON encoded Python code to run (`"source": "code"` only).
 - `packages`: Array of extra packages to be installed (`"source": "code"` only). *If you're not sure whether you need to install certain package or not, you can run the command `uv pip list` via subprocess (see the example below).*
@@ -58,6 +61,7 @@ Contents of the `config.json` file:
 {
   "parameters": {
     "source": "git",
+    "venv": "3.13",
     "git": {
       "url": "https://github.com/keboola/component-custom-python-example-repo-1.git",
       "branch": "main",
@@ -91,6 +95,8 @@ The above code in the `config.json` file format for local testing:
 ```json
 {
   "parameters": {
+    "source": "code",
+    "venv": "base",
     "code": "import datetime\nimport subprocess\n\nprint(\"Hello world!\")\nprint(\"Current date and time:\", datetime.datetime.now())\nprint(\"See the full list of preinstalled packages:\")\n\nsubprocess.check_call([\"uv\", \"pip\", \"list\"])\n",
     "packages": []
   }
@@ -115,6 +121,8 @@ The above code in the `config.json` file format for local testing:
 ```json
 {
   "parameters": {
+    "source": "code",
+    "venv": "3.13",
     "code": "from keboola.component import CommonInterface\n\nci = CommonInterface()\n# access user parameters\nprint(ci.configuration.parameters)",
     "packages": [],
     "user_properties": {
