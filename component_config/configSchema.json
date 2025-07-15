@@ -48,7 +48,7 @@
       "propertyOrder": 30
     },
     "source": {
-      "type": "radio",
+      "type": "string",
       "title": "Source Code & Dependencies",
       "propertyOrder": 30,
       "enum": [
@@ -152,7 +152,7 @@
           }
         },
         "auth": {
-          "type": "radio",
+          "type": "string",
           "title": "Repository Visibility & Authentication",
           "propertyOrder": 100,
           "enum": [
