@@ -1,5 +1,6 @@
 import logging
 import subprocess
+import threading
 
 from keboola.component.exceptions import UserException
 
@@ -16,18 +17,36 @@ class SubprocessRunner:
             args,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
-            text=False,
+            text=True,
         )
 
-        stdout, stderr = process.communicate()
-        if stdout:
-            logging.info("Command output:\n%s", stdout.decode())
+        stderr_output = []
 
-        process.poll()
-        if process.poll() != 0:
-            stderr_str = stderr.decode() if stderr else "Unknown error."
+        def read_stderr():
+            if process.stderr:
+                for line in iter(process.stderr.readline, ""):
+                    stderr_output.append(line.strip())
+                    logging.info("Command stderr: %s", line.strip())
+                process.stderr.close()
+
+        # Start stderr reader thread
+        stderr_thread = threading.Thread(target=read_stderr)
+        stderr_thread.start()
+
+        # Read stdout in main thread
+        stdout_lines = []
+        if process.stdout:
+            for line in iter(process.stdout.readline, ""):
+                stdout_lines.append(line.strip())
+                logging.info("Command output: %s", line.strip())
+            process.stdout.close()
+        stderr_thread.join()
+
+        process.wait()
+        stderr_str = "\n".join(stderr_output) if stderr_output else "Unknown error."
+        if process.returncode != 0:
             raise UserException(f"{err_message} Log in event detail.", stderr_str)
-        elif stderr:
-            logging.info("%s Full log in detail.", ok_message, extra={"full_message": stderr.decode()})
+        elif stderr_str:
+            logging.info("%s Full log in detail.", ok_message, extra={"full_message": stderr_str})
         else:
             logging.info(ok_message)
