@@ -27,7 +27,6 @@
           "Python 3.10 – Shared environment (contains many pre-installed packages in legacy versions) – This used to be the default choice"
         ]
       },
-      "required": false,
       "propertyOrder": 10
     },
     "user_properties": {
@@ -64,8 +63,7 @@
           "Get from Git repository"
         ]
       },
-      "default": "code",
-      "required": false
+      "default": "code"
     },
     "packages": {
       "type": "array",
@@ -112,8 +110,7 @@
       },
       "required": [
         "url",
-        "branch",
-        "filename"
+        "auth"
       ],
       "properties": {
         "url": {
@@ -121,12 +118,53 @@
           "title": "Repository URL",
           "propertyOrder": 70
         },
+        "auth": {
+          "type": "string",
+          "format": "radio",
+          "title": "Repository Visibility & Authentication",
+          "propertyOrder": 80,
+          "enum": [
+            "none",
+            "pat",
+            "ssh"
+          ],
+          "options": {
+            "enum_titles": [
+              "Public – None",
+              "Private – Personal Access Token",
+              "Private – SSH Key"
+            ]
+          },
+          "default": "none"
+        },
+        "#token": {
+          "type": "string",
+          "title": "Personal Access Token",
+          "propertyOrder": 90,
+          "options": {
+            "dependencies": {
+              "auth": "pat"
+            }
+          }
+        },
+        "ssh_keys": {
+          "type": "object",
+          "format": "ssh-editor",
+          "propertyOrder": 100,
+          "options": {
+            "only_keys": true,
+            "dependencies": {
+              "auth": "ssh"
+            }
+          }
+        },
         "branch": {
           "type": "string",
           "enum": [],
           "title": "Branch Name",
-          "propertyOrder": 80,
+          "propertyOrder": 110,
           "options": {
+            "tooltip": "If left empty, the default value `main` will be used.",
             "async": {
               "label": "List Branches",
               "action": "listBranches",
@@ -141,8 +179,9 @@
           "type": "string",
           "enum": [],
           "title": "Script Filename",
-          "propertyOrder": 90,
+          "propertyOrder": 120,
           "options": {
+            "tooltip": "If left empty, the default value `main.py` will be used.",
             "async": {
               "label": "List Files",
               "action": "listFiles",
@@ -150,46 +189,6 @@
                 "git.branch"
               ],
               "cache": false
-            }
-          }
-        },
-        "auth": {
-          "type": "string",
-          "title": "Repository Visibility & Authentication",
-          "propertyOrder": 100,
-          "enum": [
-            "none",
-            "pat",
-            "ssh"
-          ],
-          "options": {
-            "enum_titles": [
-              "Public – None",
-              "Private – Personal Access Token",
-              "Private – SSH Key"
-            ]
-          },
-          "default": "none",
-          "required": false
-        },
-        "#token": {
-          "type": "string",
-          "title": "Personal Access Token",
-          "propertyOrder": 110,
-          "options": {
-            "dependencies": {
-              "auth": "pat"
-            }
-          }
-        },
-        "ssh_keys": {
-          "type": "object",
-          "format": "ssh-editor",
-          "propertyOrder": 120,
-          "options": {
-            "only_keys": true,
-            "dependencies": {
-              "auth": "ssh"
             }
           }
         }
