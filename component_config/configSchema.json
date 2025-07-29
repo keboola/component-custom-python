@@ -2,7 +2,9 @@
   "type": "object",
   "title": "Configuration",
   "required": [
-    "user_properties"
+    "venv",
+    "user_properties",
+    "source"
   ],
   "properties": {
     "venv": {
