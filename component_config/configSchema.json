@@ -2,7 +2,9 @@
   "type": "object",
   "title": "Configuration",
   "required": [
-    "user_properties"
+    "venv",
+    "user_properties",
+    "source"
   ],
   "properties": {
     "venv": {
@@ -19,7 +21,7 @@
       "options": {
         "tooltip": "- **Isolated environment** takes a couple of seconds to start, but gives you the opportuninty to pick one of the latest versions of Python. It's also a safer choice as it prevents package collisions.\n- Non-isolated environment (used to be the default choice) might start a bit faster, but can lead to issues mentioned above. It will also become a subject to deprecation in the future.\n- We recommmend you **update the code regularly** to make sure it runs with the latest versions of all packages. This will help you avoid issues with abandoned packages and **security vulnerabilities**.",
         "enum_titles": [
-          "Python 3.14 beta – Isolated environment (just the packages of your choice)",
+          "Python 3.14 RC – Isolated environment (just the packages of your choice)",
           "Python 3.13 – Isolated environment (just the packages of your choice) – This is the recommended choice 🐙",
           "Python 3.12 – Isolated environment (just the packages of your choice)",
           "Python 3.10 – Shared environment (contains many pre-installed packages in legacy versions) – This used to be the default choice"
