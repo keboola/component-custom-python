@@ -64,6 +64,8 @@ class Component(ComponentBase):
             os.environ["VIRTUAL_ENV"] = str(venv_path)
 
         if self.parameters.source == SourceEnum.CODE:
+            if "keboola.component" not in self.parameters.packages:
+                self.parameters.packages.insert(0, "keboola.component")
             PackageInstaller.install_packages(self.parameters.packages)
         else:
             PackageInstaller.install_packages_for_repository(base_path)

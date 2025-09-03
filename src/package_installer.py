@@ -10,15 +10,10 @@ MSG_ERR = "Installation failed."
 
 class PackageInstaller:
     @staticmethod
-    def install_packages(packages: list[str], use_pip=False):
-        if use_pip:
-            uv_args = ["pip", "install"]
-        else:
-            uv_args = ["add"]
-
+    def install_packages(packages: list[str]):
         for package in packages:
             logging.info("Installing package: %s...", package)
-            args = ["uv", *uv_args, package]
+            args = ["uv", "pip", "install", package]
             SubprocessRunner.run(args, MSG_OK, MSG_ERR)
 
     @staticmethod
@@ -36,7 +31,7 @@ class PackageInstaller:
         requirements_file = repository_path / "requirements.txt"
 
         # Explicitly install keboola.component in case user didn't include in their dependencies file
-        PackageInstaller.install_packages(["keboola.component"], use_pip=True)
+        PackageInstaller.install_packages(["keboola.component"])
 
         args = None
         if pyproject_file.exists() and uv_lock_file.exists():
