@@ -1,0 +1,14 @@
+{
+  "parameters": {
+    "source": "code",
+    "packages": [],
+    "user_properties": {
+      "debug": true,
+      "rectangle_a": 3.0,
+      "rectangle_b": 4.0,
+      "endpoint": "https://www.example.com"
+    },
+    "venv": "3.13",
+    "code": "import sys\n\nprint(sys.executable, sys.version)\n\nfrom keboola.component import CommonInterface\n\n\nci = CommonInterface()\nprint(ci.configuration.parameters)\n"
+  }
+}
