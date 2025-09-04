@@ -38,7 +38,7 @@ class SubprocessRunner:
         if process.stdout:
             for line in iter(process.stdout.readline, ""):
                 stdout_lines.append(line.strip())
-                logging.info("Command output: %s", line.strip())
+                logging.info(line.strip())
             process.stdout.close()
         stderr_thread.join()
 
