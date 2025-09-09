@@ -1,1 +1,1 @@
-Custom Python Application 
+Run custom Python code within Keboola to create lightweight integrations and applications that connect with external systems, exchange data, or use secure credentials—without registering a standalone component.
