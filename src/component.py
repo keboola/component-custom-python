@@ -21,6 +21,16 @@ from source_git import GitHandler
 from subprocess_runner import SubprocessRunner
 from venv_manager import VenvManager
 
+MAX_MESSAGE_LENGTH = 3500
+MAX_DETAIL_LENGTH = 50000
+
+
+def truncate_message(message: str, max_length: int, suffix: str = "... [truncated]") -> str:
+    """Truncate a message to max_length, adding suffix if truncated."""
+    if len(message) <= max_length:
+        return message
+    return message[: max_length - len(suffix)] + suffix
+
 
 class Component(ComponentBase):
     """
@@ -85,13 +95,16 @@ class Component(ComponentBase):
             logging.info("Executing script:\n%s", self.script_excerpt(script))
             args = ["uv", "run", str(file_path)]
             SubprocessRunner.run(args, "Script executed successfully.", "Script execution failed.")
+        except UserException:
+            raise
         except Exception as err:
             _, _, tb = sys.exc_info()
             stack_len = len(traceback.extract_tb(tb)[4:])
             stack_trace_records = self._get_stack_trace_records(*sys.exc_info(), -stack_len, chain=True)
             stack_cropped = "\n".join(stack_trace_records)
-
-            raise UserException(f"Script failed. {err}. Detail: {stack_cropped}") from err
+            error_msg = truncate_message(str(err), MAX_MESSAGE_LENGTH)
+            detail = truncate_message(stack_cropped, MAX_DETAIL_LENGTH)
+            raise UserException(f"Script failed. {error_msg}", detail) from err
 
     @staticmethod
     def _get_stack_trace_records(etype, value, tb, limit=None, chain=True):
@@ -158,10 +171,11 @@ if __name__ == "__main__":
         # this triggers the run method by default and is controlled by the configuration.action parameter
         comp.execute_action()
     except UserException as exc:
-        detail = ""
+        error_msg = truncate_message(str(exc.args[0]) if exc.args else str(exc), MAX_MESSAGE_LENGTH)
+        logging.error(error_msg)
         if len(exc.args) > 1:
-            detail = exc.args[1]
-        logging.exception(exc, extra={"full_message": detail})
+            detail = truncate_message(str(exc.args[1]), MAX_DETAIL_LENGTH)
+            logging.error("Error details:", extra={"full_message": detail})
         exit(1)
     except Exception as exc:
         logging.exception(exc)
