@@ -61,7 +61,7 @@ class SubprocessRunner:
     @staticmethod
     def run(
         args: list[str],
-        ok_message: str = "Command finished sucessfully.",
+        ok_message: str = "Command finished successfully.",
         err_message: str = "Command failed.",
     ):
         logging.debug("Running command: %s", " ".join(args))
