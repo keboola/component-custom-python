@@ -1,6 +1,8 @@
 from dataclasses import dataclass, field
 from enum import Enum
 
+from keboola.component.exceptions import UserException
+
 
 # the encrypted keys (prefixed with # in Keboola) have to be prefixed with "encrypted_" here
 def encrypted_keys(key: str) -> str:
@@ -50,8 +52,15 @@ class GitConfiguration:
 @dataclass
 class Configuration:
     source: SourceEnum = SourceEnum.CODE
-    user_properties: dict[str, object] = field(default_factory=dict)
+    user_properties: dict[str, object] | list = field(default_factory=dict)
     venv: VenvEnum = VenvEnum.BASE
     packages: list[str] = field(default_factory=list)
     code: str = ""
     git: GitConfiguration = field(default_factory=GitConfiguration)
+
+    def __post_init__(self):
+        if isinstance(self.user_properties, list):
+            if len(self.user_properties) == 0:
+                self.user_properties = {}
+            else:
+                raise UserException("Invalid user_properties: non-empty list not supported")
