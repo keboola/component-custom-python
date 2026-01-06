@@ -175,7 +175,7 @@ if __name__ == "__main__":
         logging.error(error_msg)
         if len(exc.args) > 1:
             detail = truncate_message(str(exc.args[1]), MAX_DETAIL_LENGTH)
-            logging.error("Error details:", extra={"full_message": detail})
+            logging.error(f"Error details: {detail}")
         exit(1)
     except Exception as exc:
         logging.exception(exc)
