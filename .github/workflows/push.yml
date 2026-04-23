@@ -5,6 +5,7 @@ on:
       - main
     tags:
       - "*"  # Skip the workflow on the main branch without tags
+  workflow_dispatch:
 
 concurrency: ci-${{ github.ref }} # to avoid tag collisions in the ECR
 env:
