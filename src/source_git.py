@@ -3,6 +3,7 @@ import os
 import subprocess
 import sys
 from pathlib import Path
+from urllib.parse import urlparse
 
 from keboola.component.exceptions import UserException
 
@@ -43,7 +44,19 @@ class GitHandler:
         self.repo_auth_url = self.git_cfg.url.replace(
             "https://", f"https://x-token-auth:{self.git_cfg.encrypted_token}@"
         )
+        self._set_up_netrc(self.git_cfg.url, self.git_cfg.encrypted_token)
         logging.info("Git token authentication set up for HTTPS URL.")
+
+    @staticmethod
+    def _set_up_netrc(repo_url: str, token: str) -> None:
+        parsed = urlparse(repo_url)
+        if not parsed.hostname:
+            return
+        netrc_path = Path.home() / ".netrc"
+        entry = f"machine {parsed.hostname}\nlogin x-token-auth\npassword {token}\n"
+        with open(netrc_path, "w") as f:
+            f.write(entry)
+        os.chmod(netrc_path, 0o600)
 
     def _set_up_ssh_command(self) -> None:
         if not self.git_cfg.ssh_keys.keys.encrypted_private:

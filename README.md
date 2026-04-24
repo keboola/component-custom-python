@@ -22,6 +22,11 @@
   - [Logging](#logging)
   - [Development](#development)
   - [Integration](#integration)
+  - [Addendum](#addendum)
+    - [Generating a Personal Access Token (PAT) for GitHub](#generating-a-personal-access-token-pat-for-github)
+      - [Personal repository](#personal-repository)
+      - [Repository in a GitHub organisation](#repository-in-a-github-organisation)
+    - [Using private git dependencies](#using-private-git-dependencies)
 
 
 # Custom Python Component
@@ -82,6 +87,8 @@ The git configuration object supports the following parameters:
   - `pat`: Private repository, Personal Access Token.
   - `ssh`: Private repository, SSH key.
 - `#token`: Personal Access Token (`"auth": "pat"` only). This value will be encrypted in Keboola Storage.
+  The same token also authenticates private git dependencies declared in `[tool.uv.sources]` in your `pyproject.toml`,
+  so there is no need to embed tokens directly in the source file.
 - `ssh_keys`: SSH keys configuration object (`"auth": "ssh"` only).
 
 
@@ -582,3 +589,44 @@ docker compose up test
 For details on deployment and integration with Keboola, refer to the
 [deployment section of the developer
 documentation](https://developers.keboola.com/extend/component/deployment/).
+
+
+## Addendum
+
+### Generating a Personal Access Token (PAT) for GitHub
+
+#### Personal repository
+
+1. Go to **GitHub → Settings → Developer settings → Personal access tokens → Fine-grained tokens**
+2. Click **Generate new token**
+3. Under **Repository access**, select your repository
+4. Under **Repository permissions**, enable **Contents: Read-only**
+5. Click **Generate token** and copy the value
+
+#### Repository in a GitHub organisation
+
+1. Same steps as above, but set **Resource owner** to your organisation
+2. Under **Repository permissions**, enable **Contents: Read-only**
+3. The organisation owner may need to approve the token before it works — check your organisation's token approval settings
+4. If your organisation enforces SAML SSO: after generating the token, open its detail page and click **Configure SSO → Authorize** next to your organisation
+
+### Using private git dependencies
+
+If your repository's `pyproject.toml` references other private repositories as
+dependencies via `[tool.uv.sources]`, the component will authenticate against
+those using the same PAT — no need to embed tokens in the source file.
+
+This requires a `uv.lock` committed alongside `pyproject.toml`. To generate it
+locally when the dependency is in a private repository, make sure your git
+credentials for github.com are configured first:
+
+- With the `gh` CLI: `gh auth setup-git`
+- Without it, add an entry to `~/.netrc`:
+  ```
+  machine github.com
+  login x-token-auth
+  password YOUR_PAT
+  ```
+  Then `chmod 600 ~/.netrc`.
+
+Then run `uv lock` and commit the result.

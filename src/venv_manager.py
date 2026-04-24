@@ -14,7 +14,7 @@ class VenvManager:
             main_script_file (str): Path to the main script file.
         """
         venv_path = base_path / ".venv"
-        args = ["uv", "venv", "-p", py_version, str(venv_path)]
+        args = ["uv", "venv", "-p", py_version, "--clear", str(venv_path)]
 
         SubprocessRunner.run(args, "Environment created successfully.", "Environment creation failed.")
 
