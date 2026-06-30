@@ -20,7 +20,7 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "dacite", specifier = ">=1.9.2" },
-    { name = "keboola-component", specifier = ">=1.6.10" },
+    { name = "keboola-component", specifier = ">=1.11.0" },
 ]
 
 [package.metadata.requires-dev]
@@ -79,16 +79,16 @@ wheels = [
 
 [[package]]
 name = "keboola-component"
-version = "1.10.0"
+version = "1.11.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "deprecated" },
     { name = "keboola-vcr" },
     { name = "pygelf" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/d2/ae/245a40a051f5b8a27ff4dc8850ca0241173af20ffaf22bc24c2af3f3c257/keboola_component-1.10.0.tar.gz", hash = "sha256:d5cd73110763b3688cfff7061e2bddae8dff63b8f2df3b6a3b90a26a1b73fa7d", size = 72129, upload-time = "2026-04-09T10:53:04.419Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/b4/8f/fb237bee1b04628fe73bae4eef9dabbeb6232f85bd0e2af8b2b44dd0eede/keboola_component-1.11.0.tar.gz", hash = "sha256:9489090aa31078bf1efce1cb7f0a9db1bff7fc0e1ea5d979ffd2944feaddcf9d", size = 72281, upload-time = "2026-06-30T12:40:32.92Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/84/b0/e4e5eac31a31732ebd88f8f67b9bf3b0b03c23bbc12f28582aa13f9d4db0/keboola_component-1.10.0-py3-none-any.whl", hash = "sha256:d6cb49adfdf9cca602c45565e23e649d9874afec9906e3a7f7fa49755df172f8", size = 44461, upload-time = "2026-04-09T10:53:05.368Z" },
+    { url = "https://files.pythonhosted.org/packages/43/11/da2c226f3f4980c26c041fddf7268d9d9d0bf9c5fdc78b27642796dd752a/keboola_component-1.11.0-py3-none-any.whl", hash = "sha256:76445867d7e53ce3e85bea3ecf48c2d74274d6ff91c94890bf1add62ae2ee22f", size = 44390, upload-time = "2026-06-30T12:40:31.862Z" },
 ]
 
 [[package]]
