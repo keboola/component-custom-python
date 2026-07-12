@@ -99,6 +99,55 @@
         }
       }
     },
+    "private_pypi": {
+      "type": "object",
+      "title": "Private PyPI Repository (Optional)",
+      "propertyOrder": 55,
+      "options": {
+        "tooltip": "Configure a private PyPI repository (e.g., Artifactory, Nexus, or any PEP 503 compliant index) to install packages from. The private repository will be used as an additional index alongside the public PyPI."
+      },
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "title": "Enable Private PyPI Repository",
+          "default": false,
+          "propertyOrder": 1
+        },
+        "url": {
+          "type": "string",
+          "title": "Repository URL",
+          "propertyOrder": 2,
+          "options": {
+            "tooltip": "The URL of the private PyPI repository (e.g., https://artifactory.example.com/api/pypi/pypi-local/simple/). Must be a PEP 503 compliant simple index URL.",
+            "dependencies": {
+              "enabled": true
+            }
+          }
+        },
+        "username": {
+          "type": "string",
+          "title": "Username",
+          "propertyOrder": 3,
+          "options": {
+            "tooltip": "Username for authentication (optional for some repositories).",
+            "dependencies": {
+              "enabled": true
+            }
+          }
+        },
+        "#password": {
+          "type": "string",
+          "title": "Password / Token",
+          "propertyOrder": 4,
+          "options": {
+            "tooltip": "Password or API token for authentication.",
+            "dependencies": {
+              "enabled": true
+            }
+          }
+        }
+      }
+    },
     "git": {
       "type": "object",
       "title": "Git Repository Source Settings",
