@@ -46,14 +46,23 @@ class Component(ComponentBase):
     def __init__(self):
         super().__init__()
         self._set_init_logging_handler()
-        self.parameters = dacite.from_dict(
-            Configuration,
-            self.configuration.parameters,
-            config=dacite.Config(
-                cast=[AuthEnum, SourceEnum, VenvEnum],
-                convert_key=encrypted_keys,
-            ),
-        )
+        try:
+            self.parameters = dacite.from_dict(
+                Configuration,
+                self.configuration.parameters,
+                config=dacite.Config(
+                    cast=[AuthEnum, SourceEnum, VenvEnum],
+                    convert_key=encrypted_keys,
+                ),
+            )
+        except dacite.DaciteFieldError as err:
+            # A configuration field with an unexpected type or a missing required field is a user
+            # problem, not an internal one. Re-raise as UserException so the job exits 1 with an
+            # actionable message instead of exiting 2 with an opaque internal error.
+            raise UserException(
+                f'Invalid component configuration: please check the "{err.field_path}" parameter '
+                f"in the configuration. Detail: {err}"
+            ) from err
 
     def run(self):
         if self.parameters.source == SourceEnum.CODE:
