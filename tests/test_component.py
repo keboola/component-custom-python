@@ -1,4 +1,6 @@
+import json
 import os
+import tempfile
 import unittest
 
 import mock
@@ -6,7 +8,7 @@ from freezegun import freeze_time
 from keboola.component.exceptions import UserException
 
 from component import Component
-from configuration import Configuration
+from configuration import Configuration, SourceEnum, VenvEnum
 
 
 class TestComponent(unittest.TestCase):
@@ -58,6 +60,72 @@ class TestConfigurationUserProperties(unittest.TestCase):
         config = Configuration()
         self.assertEqual(config.user_properties, {})
         self.assertIsInstance(config.user_properties, dict)
+
+
+class TestConfigurationParsingErrors(unittest.TestCase):
+    """Configuration parsing errors must surface as UserException, not as an internal error.
+
+    A configuration field with an unexpected type used to escape ``dacite.from_dict`` as a raw
+    ``DaciteFieldError``, which the entrypoint caught as a generic exception and turned into an
+    opaque internal error (exit 2). Such input is a user problem, so it must exit 1 with a message
+    naming the offending field.
+    """
+
+    @staticmethod
+    def _datadir(parameters: dict):
+        """Create a temporary data folder holding a config.json with the given parameters."""
+        datadir = tempfile.TemporaryDirectory()
+        with open(os.path.join(datadir.name, "config.json"), "w") as config_file:
+            json.dump({"parameters": parameters}, config_file)
+        return datadir
+
+    def _build_component(self, parameters: dict) -> Component:
+        datadir = self._datadir(parameters)
+        self.addCleanup(datadir.cleanup)
+        with mock.patch.dict(os.environ, {"KBC_DATADIR": datadir.name}):
+            return Component()
+
+    def test_string_user_properties_raises_user_exception(self):
+        """A string in user_properties must raise UserException naming the field, not exit 2."""
+        with self.assertRaises(UserException) as context:
+            self._build_component({"source": "code", "venv": "base", "user_properties": '{"key": "value"}'})
+        self.assertIn("Invalid component configuration", str(context.exception))
+        self.assertIn("user_properties", str(context.exception))
+
+    def test_wrong_type_in_other_field_raises_user_exception(self):
+        """Any field of an unexpected type is reported the same way."""
+        with self.assertRaises(UserException) as context:
+            self._build_component(
+                {"source": "code", "venv": "base", "user_properties": {}, "packages": "pandas"}
+            )
+        self.assertIn("Invalid component configuration", str(context.exception))
+        self.assertIn("packages", str(context.exception))
+
+    def test_post_init_user_exception_is_not_rewrapped(self):
+        """UserException raised in Configuration.__post_init__ keeps its original message."""
+        with self.assertRaises(UserException) as context:
+            self._build_component(
+                {"source": "code", "venv": "base", "user_properties": ["item1", "item2"]}
+            )
+        self.assertIn("non-empty list not supported", str(context.exception))
+        self.assertNotIn("Invalid component configuration", str(context.exception))
+
+    def test_valid_configuration_is_parsed_unchanged(self):
+        """A valid configuration still parses into the expected Configuration values."""
+        component = self._build_component(
+            {
+                "source": "code",
+                "venv": "3.13",
+                "user_properties": {"debug": False},
+                "packages": ["pandas"],
+                "code": "print('hello')",
+            }
+        )
+        self.assertEqual(component.parameters.source, SourceEnum.CODE)
+        self.assertEqual(component.parameters.venv, VenvEnum.PY_3_13)
+        self.assertEqual(component.parameters.user_properties, {"debug": False})
+        self.assertEqual(component.parameters.packages, ["pandas"])
+        self.assertEqual(component.parameters.code, "print('hello')")
 
 
 if __name__ == "__main__":
