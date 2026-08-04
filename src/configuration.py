@@ -50,6 +50,14 @@ class GitConfiguration:
 
 
 @dataclass
+class PrivatePyPIConfiguration:
+    enabled: bool = False
+    url: str = ""
+    username: str = ""
+    encrypted_password: str | None = None
+
+
+@dataclass
 class Configuration:
     source: SourceEnum = SourceEnum.CODE
     user_properties: dict[str, object] | list = field(default_factory=dict)
@@ -57,6 +65,7 @@ class Configuration:
     packages: list[str] = field(default_factory=list)
     code: str = ""
     git: GitConfiguration = field(default_factory=GitConfiguration)
+    private_pypi: PrivatePyPIConfiguration = field(default_factory=PrivatePyPIConfiguration)
 
     def __post_init__(self):
         if isinstance(self.user_properties, list):
