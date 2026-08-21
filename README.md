@@ -6,6 +6,7 @@
     - [Git configuration](#git-configuration)
     - [SSH configuration](#ssh-configuration)
     - [GitHub OAuth configuration](#github-oauth-configuration)
+      - [Choose "Only select repositories"](#choose-only-select-repositories)
     - [Example: Running code saved in custom repository + template 🧩](#example-running-code-saved-in-custom-repository--template-)
     - [Example: Listing preinstalled packages](#example-listing-preinstalled-packages)
     - [Example: Accessing custom configuration parameters](#example-accessing-custom-configuration-parameters)
@@ -109,10 +110,14 @@ The git configuration object supports the following parameters:
 With `"auth": "oauth"` no credential is entered into the configuration at all – the access token is issued by
 the Keboola OAuth broker. Only `https://github.com` URLs are supported.
 
+The Keboola GitHub App has the client ID `Iv23liWeMeCpr1xBOVsj`. You can review the access you granted it, and
+revoke it, at
+[github.com/settings/connections/applications/Iv23liWeMeCpr1xBOVsj](https://github.com/settings/connections/applications/Iv23liWeMeCpr1xBOVsj).
+
 Setting this up takes two separate steps on GitHub, **in this order**:
 
-1. **Install** the Keboola GitHub App on your account or organisation
-   (`https://github.com/apps/<app-slug>/installations/new`) and pick the repositories it may read.
+1. **Install** the app on your account or organisation
+   (`https://github.com/apps/<app-slug>/installations/new`) and choose which repositories it may read.
    Repository selection happens here and nowhere else.
 2. **Authorize** the component in the **Authorization** section of the configuration in Keboola.
 3. Pick the repository from the **Repository** dropdown, which lists what the installation makes available.
@@ -125,9 +130,28 @@ Keboola will not change it.
 
 Some organisations require an owner to approve the installation before it takes effect.
 
-The app requests `Contents: Read-only` and `Metadata: Read-only`, and the token is limited to the intersection
-of those permissions and your own access. It does not authenticate private git dependencies declared in
+
+#### Choose "Only select repositories"
+
+The installation dialog offers **All repositories** or **Only select repositories**. Choose the second one and
+list only the repositories this component needs.
+
+That dialog is the only place where the reach of the access token is decided, and narrowing it is the entire
+reason to use OAuth rather than a personal access token. **All repositories** grants `Contents: Read-only`
+across every repository in the account or organisation, including ones created later, and the token that
+results does not expire – which is the same over-scoped, long-lived credential that a personal access token
+was criticised for. Keboola cannot narrow this from its side; only the installation can.
+
+On a large organisation, **All repositories** also makes the **Repository** dropdown slow to load or unable to
+load at all. A narrow selection avoids that.
+
+The token is always the intersection of what the app may read and what you can read yourself, so it never
+reaches anything you could not already reach. The app requests `Contents: Read-only` and `Metadata:
+Read-only`, and nothing else. It does not authenticate private git dependencies declared in
 `[tool.uv.sources]` – keep using `pat` if you rely on those.
+
+To change the selection later, reconfigure the installation on GitHub. Re-authorizing in Keboola does not
+change it.
 
 
 ### Example: Running code saved in custom repository + template 🧩
