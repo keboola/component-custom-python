@@ -15,6 +15,7 @@ from keboola.component.base import ComponentBase, sync_action
 from keboola.component.exceptions import UserException
 
 from configuration import AuthEnum, Configuration, SourceEnum, VenvEnum, encrypted_keys
+from github_api import GitHubApi
 from package_installer import PackageInstaller
 from source_file import FileHandler
 from source_git import GitHandler
@@ -171,6 +172,28 @@ class Component(ComponentBase):
         config_data["parameters"] = self.parameters.user_properties
         with open(Path(self.data_folder_path) / "config.json", "w+") as inp:
             json.dump(config_data, inp)
+
+    @sync_action("listRepositories")
+    def get_oauth_repositories(self):
+        """
+        Returns the repositories the Keboola GitHub App is allowed to read.
+        This method is used to populate the repository dropdown in the UI.
+        """
+        if not self.oauth_token:
+            raise UserException(
+                "GitHub authorization is missing. Please authorize the component in the Authorization "
+                "section of the configuration."
+            )
+
+        repositories = GitHubApi(self.oauth_token).list_installation_repositories()
+        if not repositories:
+            # authorizing does not install the app, so this is the expected state after authorizing alone
+            raise UserException(
+                "No repositories are available to the Keboola GitHub App. Install the app on the account "
+                "owning the repository and include that repository in the app's repository selection."
+            )
+
+        return repositories
 
     @sync_action("listBranches")
     def get_repository_branches(self):

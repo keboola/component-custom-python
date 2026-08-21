@@ -116,7 +116,16 @@
         "url": {
           "type": "string",
           "title": "Repository URL",
-          "propertyOrder": 70
+          "propertyOrder": 70,
+          "options": {
+            "dependencies": {
+              "auth": [
+                "none",
+                "pat",
+                "ssh"
+              ]
+            }
+          }
         },
         "auth": {
           "type": "string",
@@ -161,6 +170,24 @@
             }
           }
         },
+        "repository": {
+          "type": "string",
+          "enum": [],
+          "format": "select",
+          "title": "Repository",
+          "propertyOrder": 105,
+          "options": {
+            "dependencies": {
+              "auth": "oauth"
+            },
+            "tooltip": "Only repositories included in the Keboola GitHub App installation are listed. To make more of them available, change the repository selection of the installation on GitHub.",
+            "async": {
+              "label": "List Repositories",
+              "action": "listRepositories",
+              "cache": false
+            }
+          }
+        },
         "branch": {
           "type": "string",
           "enum": [],
@@ -172,7 +199,8 @@
               "label": "List Branches",
               "action": "listBranches",
               "autoload": [
-                "git.url"
+                "git.url",
+                "git.repository"
               ],
               "cache": false
             }

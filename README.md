@@ -80,7 +80,9 @@ configured and executed directly in Keboola. This eliminates the need to build a
 
 The git configuration object supports the following parameters:
 
-- `url`: Repository URL – supports both HTTPS and SSH formats.
+- `url`: Repository URL – supports both HTTPS and SSH formats (all `auth` methods except `oauth`).
+- `repository`: Clone URL of the repository, picked from a list of what the GitHub App may read
+  (`"auth": "oauth"` only). Replaces `url` for OAuth configurations.
 - `branch`: Branch name to checkout – UI provides branch selection.
 - `filename`: Python script filename to execute – UI lists available files.
 - `auth`: Repository visibility & authentication method.
@@ -113,11 +115,13 @@ Setting this up takes two separate steps on GitHub, **in this order**:
    (`https://github.com/apps/<app-slug>/installations/new`) and pick the repositories it may read.
    Repository selection happens here and nowhere else.
 2. **Authorize** the component in the **Authorization** section of the configuration in Keboola.
+3. Pick the repository from the **Repository** dropdown, which lists what the installation makes available.
 
-The two steps are independent. Authorizing does not install the app, and the authorization screen offers no
-repository selection at all – so if you authorize without installing first, you receive a valid token that can
-see no repositories and the job fails with `repository not found`. To change which repositories are available
-later, reconfigure the installation on GitHub; re-authorizing in Keboola will not change it.
+Installing and authorizing are independent. Authorizing does not install the app, and the authorization
+screen offers no repository selection at all – so if you authorize without installing first, you receive a
+valid token that can see no repositories and the **Repository** dropdown reports that none are available. To
+change which repositories are available later, reconfigure the installation on GitHub; re-authorizing in
+Keboola will not change it.
 
 Some organisations require an owner to approve the installation before it takes effect.
 

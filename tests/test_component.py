@@ -1,7 +1,9 @@
+import io
 import json
 import os
 import tempfile
 import unittest
+import urllib.error
 from pathlib import Path
 
 import mock
@@ -10,7 +12,15 @@ from keboola.component.exceptions import UserException
 
 from component import Component
 from configuration import AuthEnum, Configuration, GitConfiguration, SourceEnum, VenvEnum
+from github_api import GitHubApi
 from source_git import GitHandler
+
+
+def api_response(payload: dict):
+    """A urlopen context manager yielding the given payload as a JSON body."""
+    response = mock.MagicMock()
+    response.__enter__.return_value = io.BytesIO(json.dumps(payload).encode())
+    return response
 
 
 class TestComponent(unittest.TestCase):
@@ -146,7 +156,7 @@ class TestOAuthAuthentication(unittest.TestCase):
 
     @staticmethod
     def _git_cfg(url: str = "https://github.com/keboola/example.git") -> GitConfiguration:
-        return GitConfiguration(url=url, auth=AuthEnum.OAUTH)
+        return GitConfiguration(repository=url, auth=AuthEnum.OAUTH)
 
     def test_missing_token_raises_user_exception(self):
         """An unauthorized configuration must fail with an actionable message, not with a git error."""
@@ -256,6 +266,107 @@ class TestAuthorizationSectionIsNotExposed(unittest.TestCase):
         self.component._merge_user_parameters()
 
         self.assertEqual(json.loads(self.config_path.read_text())["parameters"], {"debug": True})
+
+
+class TestGitHubApi(unittest.TestCase):
+    """Listing repositories has to work across several installations and several pages."""
+
+    def test_repositories_from_all_installations_are_listed(self):
+        responses = [
+            api_response({"total_count": 2, "installations": [{"id": 1}, {"id": 2}]}),
+            api_response(
+                {"total_count": 1, "repositories": [{"full_name": "acme/first", "clone_url": "https://gh/first.git"}]}
+            ),
+            api_response(
+                {"total_count": 1, "repositories": [{"full_name": "acme/second", "clone_url": "https://gh/second.git"}]}
+            ),
+        ]
+        with mock.patch("github_api.urllib.request.urlopen", side_effect=responses):
+            options = GitHubApi("secret-token").list_installation_repositories()
+
+        self.assertEqual(
+            options,
+            [
+                {"value": "https://gh/first.git", "label": "acme/first"},
+                {"value": "https://gh/second.git", "label": "acme/second"},
+            ],
+        )
+
+    def test_paginated_results_are_collected(self):
+        first_page = [{"full_name": f"acme/repo-{i}", "clone_url": f"https://gh/repo-{i}.git"} for i in range(100)]
+        responses = [
+            api_response({"total_count": 1, "installations": [{"id": 1}]}),
+            api_response({"total_count": 101, "repositories": first_page}),
+            api_response({"total_count": 101, "repositories": [{"full_name": "acme/last", "clone_url": "https://gh/l"}]}),
+        ]
+        with mock.patch("github_api.urllib.request.urlopen", side_effect=responses):
+            options = GitHubApi("secret-token").list_installation_repositories()
+
+        self.assertEqual(len(options), 101)
+        self.assertEqual(options[-1]["label"], "acme/last")
+
+    def test_request_is_authenticated(self):
+        response = api_response({"total_count": 0, "installations": []})
+        with mock.patch("github_api.urllib.request.urlopen", side_effect=[response]) as urlopen:
+            GitHubApi("secret-token").list_installation_repositories()
+
+        headers = {key.lower(): value for key, value in urlopen.call_args.args[0].header_items()}
+        self.assertEqual(headers["authorization"], "Bearer secret-token")
+        self.assertIn("user-agent", headers)
+
+    def test_revoked_authorization_is_explained(self):
+        """A revoked authorization must tell the user to re-authorize, not show a bare HTTP 401."""
+        error = urllib.error.HTTPError("https://api.github.com/user/installations", 401, "Unauthorized", {}, None)
+        with mock.patch("github_api.urllib.request.urlopen", side_effect=error):
+            with self.assertRaises(UserException) as context:
+                GitHubApi("secret-token").list_installation_repositories()
+
+        self.assertIn("authorize the component again", str(context.exception))
+
+
+class TestListRepositoriesAction(unittest.TestCase):
+    """The dropdown is where a missing app installation shows up before a job is ever run."""
+
+    def _component(self, authorized: bool) -> Component:
+        datadir = tempfile.TemporaryDirectory()
+        self.addCleanup(datadir.cleanup)
+        # "run" keeps the sync_action decorator from swallowing exceptions into exit(1)
+        config_data = {"action": "run", "parameters": {"source": "git", "venv": "base", "user_properties": {}}}
+        if authorized:
+            credentials = {"id": "main", "#data": '{"access_token": "secret-token"}'}
+            config_data["authorization"] = {"oauth_api": {"credentials": credentials}}
+        (Path(datadir.name) / "config.json").write_text(json.dumps(config_data))
+
+        with mock.patch.dict(os.environ, {"KBC_DATADIR": datadir.name}):
+            return Component()
+
+    def test_unauthorized_configuration_is_reported(self):
+        with self.assertRaises(UserException) as context:
+            self._component(authorized=False).get_oauth_repositories()
+        self.assertIn("GitHub authorization is missing", str(context.exception))
+
+    def test_missing_installation_is_reported(self):
+        component = self._component(authorized=True)
+        response = api_response({"total_count": 0, "installations": []})
+        with mock.patch("github_api.urllib.request.urlopen", side_effect=[response]):
+            with self.assertRaises(UserException) as context:
+                component.get_oauth_repositories()
+
+        self.assertIn("No repositories are available", str(context.exception))
+
+
+class TestRepositoryUrlResolution(unittest.TestCase):
+    """OAuth configurations carry the repository in "repository", the other methods in "url"."""
+
+    def test_oauth_uses_the_selected_repository(self):
+        cfg = GitConfiguration(url="https://github.com/acme/typed.git", auth=AuthEnum.OAUTH,
+                               repository="https://github.com/acme/picked.git")
+        self.assertEqual(cfg.repository_url, "https://github.com/acme/picked.git")
+
+    def test_other_methods_use_the_typed_url(self):
+        cfg = GitConfiguration(url="https://github.com/acme/typed.git", auth=AuthEnum.PAT,
+                               repository="https://github.com/acme/picked.git")
+        self.assertEqual(cfg.repository_url, "https://github.com/acme/typed.git")
 
 
 if __name__ == "__main__":

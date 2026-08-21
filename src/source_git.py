@@ -26,9 +26,10 @@ class GitHandler:
 
         self.env = os.environ.copy()
         self.git_cfg = git_cfg
+        self.repo_url = git_cfg.repository_url
         self.repo_auth_url = None  # ‼️ NEVER EVER INCLUDE THIS VARIABLE IN LOGGING OUTPUT ‼️
 
-        if not self.git_cfg.url:
+        if not self.repo_url:
             raise UserException("Git repository URL is required")
 
         if self.git_cfg.auth == AuthEnum.PAT:
@@ -36,8 +37,7 @@ class GitHandler:
         elif self.git_cfg.auth == AuthEnum.OAUTH:
             self._set_up_oauth_auth(oauth_token)
 
-        repo_url = self.git_cfg.url
-        if repo_url.startswith("git@") or repo_url.startswith("ssh://"):
+        if self.repo_url.startswith("git@") or self.repo_url.startswith("ssh://"):
             self._set_up_ssh_command()
 
         # do not ask for credentials when git authentication fails
@@ -47,13 +47,11 @@ class GitHandler:
         if not self.git_cfg.encrypted_token:
             raise UserException("No personal access token provided")
 
-        if not self.git_cfg.url.startswith("https://"):
+        if not self.repo_url.startswith("https://"):
             raise UserException("PAT authentication is only supported for HTTPS URLs")
 
-        self.repo_auth_url = self.git_cfg.url.replace(
-            "https://", f"https://x-token-auth:{self.git_cfg.encrypted_token}@"
-        )
-        self._set_up_netrc(self.git_cfg.url, self.git_cfg.encrypted_token)
+        self.repo_auth_url = self.repo_url.replace("https://", f"https://x-token-auth:{self.git_cfg.encrypted_token}@")
+        self._set_up_netrc(self.repo_url, self.git_cfg.encrypted_token)
         logging.info("Git token authentication set up for HTTPS URL.")
 
     @staticmethod
@@ -74,12 +72,12 @@ class GitHandler:
                 "section of the configuration."
             )
 
-        parsed = urlparse(self.git_cfg.url)
+        parsed = urlparse(self.repo_url)
         if parsed.scheme != "https" or parsed.hostname not in GITHUB_HOSTS:
             raise UserException("GitHub authorization is only supported for https://github.com repository URLs")
 
         # only the username goes into the URL, the token itself is supplied by the askpass helper
-        self.repo_auth_url = self.git_cfg.url.replace("https://", f"https://{OAUTH_GIT_USERNAME}@")
+        self.repo_auth_url = self.repo_url.replace("https://", f"https://{OAUTH_GIT_USERNAME}@")
         self.env[OAUTH_TOKEN_ENV] = oauth_token
         self.env["GIT_ASKPASS"] = str(self._write_askpass_helper())
         logging.info("Git OAuth authentication set up for GitHub URL.")
@@ -148,7 +146,7 @@ class GitHandler:
         """
 
         branch = self.git_cfg.branch or "main"
-        logging.info("Cloning git repository: %s", self.git_cfg.url)
+        logging.info("Cloning git repository: %s", self.repo_url)
 
         try:
             clone_args = ["git", "clone"]
@@ -156,7 +154,7 @@ class GitHandler:
             if branch:
                 clone_args.extend(["--branch", branch])
 
-            clone_args.extend([self.repo_auth_url or self.git_cfg.url, GitHandler.REPO_PATH])
+            clone_args.extend([self.repo_auth_url or self.repo_url, GitHandler.REPO_PATH])
 
             process = subprocess.Popen(
                 clone_args,
@@ -197,7 +195,7 @@ class GitHandler:
         try:
             branches_args = ["git", "ls-remote", "--heads"]
 
-            branches_args.append(self.repo_auth_url or self.git_cfg.url)
+            branches_args.append(self.repo_auth_url or self.repo_url)
 
             process = subprocess.Popen(
                 branches_args,
