@@ -117,7 +117,7 @@ revoke it, at
 Setting this up takes two separate steps on GitHub, **in this order**:
 
 1. **Install** the app on your account or organisation
-   (`https://github.com/apps/<app-slug>/installations/new`) and choose which repositories it may read.
+   (`https://github.com/apps/keboola-custom-python-read/installations/new`) and choose which repositories it may read.
    Repository selection happens here and nowhere else.
 2. **Authorize** the component in the **Authorization** section of the configuration in Keboola.
 3. Pick the repository from the **Repository** dropdown, which lists what the installation makes available.
