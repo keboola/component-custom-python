@@ -126,13 +126,16 @@
           "enum": [
             "none",
             "pat",
-            "ssh"
+            "ssh",
+            "oauth"
           ],
           "options": {
+            "tooltip": "The **GitHub (OAuth)** option is authorized in the **Authorization** section of this configuration. The repositories the component may read are selected on GitHub when the Keboola GitHub App is installed.",
             "enum_titles": [
               "Public – None",
               "Private – Personal Access Token",
-              "Private – SSH Key"
+              "Private – SSH Key",
+              "Private – GitHub (OAuth)"
             ]
           },
           "default": "none"

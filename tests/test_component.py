@@ -2,13 +2,15 @@ import json
 import os
 import tempfile
 import unittest
+from pathlib import Path
 
 import mock
 from freezegun import freeze_time
 from keboola.component.exceptions import UserException
 
 from component import Component
-from configuration import Configuration, SourceEnum, VenvEnum
+from configuration import AuthEnum, Configuration, GitConfiguration, SourceEnum, VenvEnum
+from source_git import GitHandler
 
 
 class TestComponent(unittest.TestCase):
@@ -126,6 +128,134 @@ class TestConfigurationParsingErrors(unittest.TestCase):
         self.assertEqual(component.parameters.user_properties, {"debug": False})
         self.assertEqual(component.parameters.packages, ["pandas"])
         self.assertEqual(component.parameters.code, "print('hello')")
+
+
+class TestOAuthAuthentication(unittest.TestCase):
+    """The OAuth access token must reach git without ever appearing in the command line.
+
+    The component executes arbitrary user code, so the token is passed through an askpass helper that
+    reads it from the environment of the git subprocess only.
+    """
+
+    def setUp(self):
+        home = tempfile.TemporaryDirectory()
+        self.addCleanup(home.cleanup)
+        home_patch = mock.patch.dict(os.environ, {"HOME": home.name})
+        home_patch.start()
+        self.addCleanup(home_patch.stop)
+
+    @staticmethod
+    def _git_cfg(url: str = "https://github.com/keboola/example.git") -> GitConfiguration:
+        return GitConfiguration(url=url, auth=AuthEnum.OAUTH)
+
+    def test_missing_token_raises_user_exception(self):
+        """An unauthorized configuration must fail with an actionable message, not with a git error."""
+        with self.assertRaises(UserException) as context:
+            GitHandler(self._git_cfg(), None)
+        self.assertIn("GitHub authorization is missing", str(context.exception))
+
+    def test_non_github_url_raises_user_exception(self):
+        """The token is only valid for github.com, other hosts must be rejected up front."""
+        with self.assertRaises(UserException) as context:
+            GitHandler(self._git_cfg("https://gitlab.com/keboola/example.git"), "secret-token")
+        self.assertIn("github.com", str(context.exception))
+
+    def test_token_is_not_part_of_the_clone_url(self):
+        """The clone URL carries the username only, so the token cannot leak via argv or .git/config."""
+        handler = GitHandler(self._git_cfg(), "secret-token")
+        self.assertEqual(handler.repo_auth_url, "https://x-access-token@github.com/keboola/example.git")
+
+    def test_token_is_passed_through_the_askpass_helper(self):
+        """The helper is executable and reads the token from the environment instead of embedding it."""
+        handler = GitHandler(self._git_cfg(), "secret-token")
+        self.assertEqual(handler.env["GIT_OAUTH_TOKEN"], "secret-token")
+
+        askpass_path = Path(handler.env["GIT_ASKPASS"])
+        self.assertTrue(os.access(askpass_path, os.X_OK))
+        self.assertNotIn("secret-token", askpass_path.read_text())
+
+    def test_missing_installation_is_explained(self):
+        """GitHub reports an unreachable repository as "not found", which hides the real cause."""
+        handler = GitHandler(self._git_cfg(), "secret-token")
+        explained = handler._explain_error("remote: Repository not found.")
+        self.assertIn("Keboola GitHub App", explained)
+        self.assertIn("repository selection", explained)
+
+    def test_unrelated_errors_are_not_annotated(self):
+        handler = GitHandler(self._git_cfg(), "secret-token")
+        self.assertEqual(handler._explain_error("fatal: could not read from remote"), "fatal: could not read from remote")
+
+    def test_other_auth_methods_are_untouched(self):
+        """A configuration that does not use OAuth must not gain any OAuth environment."""
+        handler = GitHandler(GitConfiguration(url="https://github.com/keboola/example.git"))
+        self.assertIsNone(handler.repo_auth_url)
+        self.assertNotIn("GIT_ASKPASS", handler.env)
+        self.assertNotIn("GIT_OAUTH_TOKEN", handler.env)
+
+    def test_ssh_hint_is_preserved(self):
+        """The pre-existing hint for SSH failures must keep working for non-OAuth configurations."""
+        handler = GitHandler(GitConfiguration(url="git@github.com:keboola/example.git", auth=AuthEnum.NONE))
+        self.assertIn("SSH key configuration", handler._explain_error("Permission denied (publickey)."))
+
+
+class TestAuthorizationSectionIsNotExposed(unittest.TestCase):
+    """The config.json handed to the user script must not contain the decrypted OAuth credentials.
+
+    Besides the user's own access token, the authorization section also carries the shared application
+    secret of the Keboola GitHub App, which must never be readable by the executed script.
+    """
+
+    CONFIG_DATA = {
+        "parameters": {"source": "code", "venv": "base", "user_properties": {"debug": True}},
+        "authorization": {
+            "oauth_api": {
+                "credentials": {
+                    "id": "main",
+                    "#data": '{"access_token": "secret-token"}',
+                    "appKey": "client-id",
+                    "#appSecret": "app-secret",
+                }
+            }
+        },
+    }
+
+    def setUp(self):
+        datadir = tempfile.TemporaryDirectory()
+        self.addCleanup(datadir.cleanup)
+        self.config_path = Path(datadir.name) / "config.json"
+        self.config_path.write_text(json.dumps(self.CONFIG_DATA))
+        with mock.patch.dict(os.environ, {"KBC_DATADIR": datadir.name}):
+            self.component = Component()
+
+    def test_access_token_is_read_from_the_authorization_section(self):
+        self.assertEqual(self.component.oauth_token, "secret-token")
+
+    def test_unreadable_credentials_raise_user_exception(self):
+        """Broker credentials that are not valid JSON must not surface as an internal error."""
+        datadir = tempfile.TemporaryDirectory()
+        self.addCleanup(datadir.cleanup)
+        config_data = dict(self.CONFIG_DATA)
+        config_data["authorization"] = {"oauth_api": {"credentials": {"id": "main", "#data": "access_token=abc"}}}
+        (Path(datadir.name) / "config.json").write_text(json.dumps(config_data))
+
+        with mock.patch.dict(os.environ, {"KBC_DATADIR": datadir.name}):
+            with self.assertRaises(UserException) as context:
+                Component()
+        self.assertIn("could not be read", str(context.exception))
+
+    def test_authorization_is_stripped_from_the_script_config(self):
+        self.component._merge_user_parameters()
+
+        written = self.config_path.read_text()
+        self.assertNotIn("authorization", json.loads(written))
+        self.assertNotIn("secret-token", written)
+        self.assertNotIn("app-secret", written)
+
+    def test_user_properties_are_still_written(self):
+        """Stripping the credentials must not disturb what the script actually needs."""
+        self.component._merge_user_parameters()
+
+        self.assertEqual(json.loads(self.config_path.read_text())["parameters"], {"debug": True})
 
 
 if __name__ == "__main__":

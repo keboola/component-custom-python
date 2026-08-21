@@ -64,13 +64,29 @@ class Component(ComponentBase):
                 f"in the configuration. Detail: {err}"
             ) from err
 
+        self.oauth_token = self._get_oauth_token()
+
+    def _get_oauth_token(self) -> str | None:
+        """Access token issued by the OAuth broker, delivered outside "parameters" in the authorization
+        section. Returns None for configurations that do not use OAuth."""
+        try:
+            credentials = self.configuration.oauth_credentials
+        except json.JSONDecodeError as err:
+            # unreadable broker credentials are a configuration problem, not an internal one
+            raise UserException(
+                "The stored GitHub authorization could not be read. Please authorize the component again "
+                "in the Authorization section of the configuration."
+            ) from err
+
+        return credentials.data.get("access_token") if credentials else None
+
     def run(self):
         if self.parameters.source == SourceEnum.CODE:
             base_path = Path(self.data_folder_path)
             script_filename = FileHandler.prepare_script_file(self.data_folder_path, self.parameters.code)
         else:
             base_path = Path(GitHandler.REPO_PATH).absolute()
-            git_handler = GitHandler(self.parameters.git)
+            git_handler = GitHandler(self.parameters.git, self.oauth_token)
             script_filename = git_handler.clone_repository()
 
         if self.parameters.venv == VenvEnum.BASE:
@@ -147,6 +163,10 @@ class Component(ComponentBase):
         # remove code
         config_data = self.configuration.config_data.copy()
 
+        # the authorization section carries the decrypted OAuth access token and the shared application
+        # secret, neither of which may reach the executed user script
+        config_data.pop("authorization", None)
+
         # build config data and overwrite for the user script
         config_data["parameters"] = self.parameters.user_properties
         with open(Path(self.data_folder_path) / "config.json", "w+") as inp:
@@ -158,7 +178,7 @@ class Component(ComponentBase):
         Returns a list of branches in the git repository.
         This method is used to populate the branches dropdown in the UI.
         """
-        git_handler = GitHandler(self.parameters.git)
+        git_handler = GitHandler(self.parameters.git, self.oauth_token)
         return git_handler.get_repository_branches()
 
     @sync_action("listFiles")
@@ -167,7 +187,7 @@ class Component(ComponentBase):
         Returns a list of branches in the git repository.
         This method is used to populate the branches dropdown in the UI.
         """
-        git_handler = GitHandler(self.parameters.git)
+        git_handler = GitHandler(self.parameters.git, self.oauth_token)
         return git_handler.get_repository_files()
 
 
