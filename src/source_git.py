@@ -30,7 +30,9 @@ class GitHandler:
         self.repo_auth_url = None  # ‼️ NEVER EVER INCLUDE THIS VARIABLE IN LOGGING OUTPUT ‼️
 
         if not self.repo_url:
-            raise UserException("Git repository URL is required")
+            raise UserException(
+                "Please select a repository" if git_cfg.auth == AuthEnum.OAUTH else "Git repository URL is required"
+            )
 
         if self.git_cfg.auth == AuthEnum.PAT:
             self._set_up_token_auth()

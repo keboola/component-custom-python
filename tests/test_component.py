@@ -158,6 +158,18 @@ class TestOAuthAuthentication(unittest.TestCase):
     def _git_cfg(url: str = "https://github.com/keboola/example.git") -> GitConfiguration:
         return GitConfiguration(repository=url, auth=AuthEnum.OAUTH)
 
+    def test_missing_repository_asks_for_a_selection(self):
+        """The repository is picked from a dropdown here, so asking for a URL would be confusing."""
+        with self.assertRaises(UserException) as context:
+            GitHandler(GitConfiguration(auth=AuthEnum.OAUTH), "secret-token")
+        self.assertIn("select a repository", str(context.exception))
+
+    def test_missing_url_still_asks_for_a_url(self):
+        """The wording for the other authentication methods is unchanged."""
+        with self.assertRaises(UserException) as context:
+            GitHandler(GitConfiguration(auth=AuthEnum.PAT))
+        self.assertIn("URL is required", str(context.exception))
+
     def test_missing_token_raises_user_exception(self):
         """An unauthorized configuration must fail with an actionable message, not with a git error."""
         with self.assertRaises(UserException) as context:
