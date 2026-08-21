@@ -147,8 +147,11 @@ load at all. A narrow selection avoids that.
 
 The token is always the intersection of what the app may read and what you can read yourself, so it never
 reaches anything you could not already reach. The app requests `Contents: Read-only` and `Metadata:
-Read-only`, and nothing else. It does not authenticate private git dependencies declared in
-`[tool.uv.sources]` – keep using `pat` if you rely on those.
+Read-only`, and nothing else.
+
+Private git dependencies declared in `[tool.uv.sources]` authenticate with the same token and need no
+credentials of their own. The repositories they live in have to be part of the installation's repository
+selection as well, not just the repository holding the code.
 
 To change the selection later, reconfigure the installation on GitHub. Re-authorizing in Keboola does not
 change it.

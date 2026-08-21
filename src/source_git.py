@@ -24,7 +24,9 @@ class GitHandler:
         # add path for absolute imports to start at the cloned repository root level
         sys.path.append(str(Path(__file__).parent.parent / GitHandler.REPO_PATH))
 
-        self.env = os.environ.copy()
+        # only the git-specific overrides; the full environment is resolved at call time so that
+        # changes made after the clone (the virtual environment selection) are not lost
+        self.git_env: dict[str, str] = {}
         self.git_cfg = git_cfg
         self.repo_url = git_cfg.repository_url
         self.repo_auth_url = None  # ‼️ NEVER EVER INCLUDE THIS VARIABLE IN LOGGING OUTPUT ‼️
@@ -43,7 +45,7 @@ class GitHandler:
             self._set_up_ssh_command()
 
         # do not ask for credentials when git authentication fails
-        self.env["GIT_TERMINAL_PROMPT"] = "0"
+        self.git_env["GIT_TERMINAL_PROMPT"] = "0"
 
     def _set_up_token_auth(self) -> None:
         if not self.git_cfg.encrypted_token:
@@ -80,8 +82,8 @@ class GitHandler:
 
         # only the username goes into the URL, the token itself is supplied by the askpass helper
         self.repo_auth_url = self.repo_url.replace("https://", f"https://{OAUTH_GIT_USERNAME}@")
-        self.env[OAUTH_TOKEN_ENV] = oauth_token
-        self.env["GIT_ASKPASS"] = str(self._write_askpass_helper())
+        self.git_env[OAUTH_TOKEN_ENV] = oauth_token
+        self.git_env["GIT_ASKPASS"] = str(self._write_askpass_helper())
         logging.info("Git OAuth authentication set up for GitHub URL.")
 
     @staticmethod
@@ -121,7 +123,7 @@ class GitHandler:
             os.chmod(ssh_key_path, 0o600)
             ssh_command.extend(["-i", str(ssh_key_path)])
 
-        self.env["GIT_SSH_COMMAND"] = " ".join(ssh_command)
+        self.git_env["GIT_SSH_COMMAND"] = " ".join(ssh_command)
 
     def _explain_error(self, error_msg: str) -> str:
         """Append an actionable hint to git errors whose raw wording does not point at the actual cause."""
@@ -138,6 +140,14 @@ class GitHandler:
             )
 
         return error_msg
+
+    def subprocess_env(self) -> dict[str, str]:
+        """Environment for a subprocess that needs to reach the repository, credentials included.
+
+        Also used for the dependency installation, so that private git dependencies declared in the
+        repository authenticate with the same credentials as the clone itself.
+        """
+        return {**os.environ, **self.git_env}
 
     def clone_repository(self, sync_action=False) -> Path:
         """
@@ -162,7 +172,7 @@ class GitHandler:
                 clone_args,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
-                env=self.env,
+                env=self.subprocess_env(),
             )
             _, stderr = process.communicate()
 
@@ -203,7 +213,7 @@ class GitHandler:
                 branches_args,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
-                env=self.env,
+                env=self.subprocess_env(),
             )
             stdout, stderr = process.communicate()
 

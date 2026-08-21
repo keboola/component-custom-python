@@ -104,7 +104,7 @@ class Component(ComponentBase):
                 self.parameters.packages.insert(0, "keboola.component")
             PackageInstaller.install_packages(self.parameters.packages)
         else:
-            PackageInstaller.install_packages_for_repository(base_path)
+            PackageInstaller.install_packages_for_repository(base_path, git_handler.subprocess_env())
 
         self._merge_user_parameters()
 

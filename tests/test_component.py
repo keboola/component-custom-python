@@ -13,6 +13,7 @@ from keboola.component.exceptions import UserException
 from component import Component
 from configuration import AuthEnum, Configuration, GitConfiguration, SourceEnum, VenvEnum
 from github_api import GitHubApi
+from package_installer import PackageInstaller
 from source_git import GitHandler
 
 
@@ -190,9 +191,9 @@ class TestOAuthAuthentication(unittest.TestCase):
     def test_token_is_passed_through_the_askpass_helper(self):
         """The helper is executable and reads the token from the environment instead of embedding it."""
         handler = GitHandler(self._git_cfg(), "secret-token")
-        self.assertEqual(handler.env["GIT_OAUTH_TOKEN"], "secret-token")
+        self.assertEqual(handler.git_env["GIT_OAUTH_TOKEN"], "secret-token")
 
-        askpass_path = Path(handler.env["GIT_ASKPASS"])
+        askpass_path = Path(handler.git_env["GIT_ASKPASS"])
         self.assertTrue(os.access(askpass_path, os.X_OK))
         self.assertNotIn("secret-token", askpass_path.read_text())
 
@@ -207,12 +208,26 @@ class TestOAuthAuthentication(unittest.TestCase):
         handler = GitHandler(self._git_cfg(), "secret-token")
         self.assertEqual(handler._explain_error("fatal: could not read from remote"), "fatal: could not read from remote")
 
+    def test_token_stays_out_of_the_process_environment(self):
+        """The executed user script inherits os.environ, so the token must never be put there."""
+        handler = GitHandler(self._git_cfg(), "secret-token")
+        self.assertNotIn("GIT_OAUTH_TOKEN", os.environ)
+        self.assertEqual(handler.subprocess_env()["GIT_OAUTH_TOKEN"], "secret-token")
+
+    def test_subprocess_env_reflects_later_environment_changes(self):
+        """The virtual environment is chosen after the clone, so the env cannot be a stale snapshot."""
+        handler = GitHandler(self._git_cfg(), "secret-token")
+        with mock.patch.dict(os.environ, {"UV_PROJECT_ENVIRONMENT": "/code/repo_clone/.venv"}):
+            env = handler.subprocess_env()
+        self.assertEqual(env["UV_PROJECT_ENVIRONMENT"], "/code/repo_clone/.venv")
+        self.assertEqual(env["GIT_OAUTH_TOKEN"], "secret-token")
+
     def test_other_auth_methods_are_untouched(self):
         """A configuration that does not use OAuth must not gain any OAuth environment."""
         handler = GitHandler(GitConfiguration(url="https://github.com/keboola/example.git"))
         self.assertIsNone(handler.repo_auth_url)
-        self.assertNotIn("GIT_ASKPASS", handler.env)
-        self.assertNotIn("GIT_OAUTH_TOKEN", handler.env)
+        self.assertNotIn("GIT_ASKPASS", handler.git_env)
+        self.assertNotIn("GIT_OAUTH_TOKEN", handler.git_env)
 
     def test_ssh_hint_is_preserved(self):
         """The pre-existing hint for SSH failures must keep working for non-OAuth configurations."""
@@ -379,6 +394,51 @@ class TestRepositoryUrlResolution(unittest.TestCase):
         cfg = GitConfiguration(url="https://github.com/acme/typed.git", auth=AuthEnum.PAT,
                                repository="https://github.com/acme/picked.git")
         self.assertEqual(cfg.repository_url, "https://github.com/acme/typed.git")
+
+
+class TestDependencyInstallationCredentials(unittest.TestCase):
+    """A repository's private git dependencies must authenticate with the credentials of the clone.
+
+    `uv sync` shells out to git, which offers no credentials of its own, so without an explicit
+    environment the fetch fails with "could not read Username for https://github.com".
+    """
+
+    def _repository(self, *files: str) -> Path:
+        repo = tempfile.TemporaryDirectory()
+        self.addCleanup(repo.cleanup)
+        self.addCleanup(os.chdir, os.getcwd())
+        repo_path = Path(repo.name)
+        for name in files:
+            (repo_path / name).write_text("")
+        return repo_path
+
+    def test_environment_is_forwarded_to_uv_sync(self):
+        repo_path = self._repository("pyproject.toml", "uv.lock")
+
+        with mock.patch("package_installer.SubprocessRunner.run") as run:
+            PackageInstaller.install_packages_for_repository(repo_path, {"GIT_OAUTH_TOKEN": "secret-token"})
+
+        args = run.call_args.args
+        self.assertEqual(args[0], ["uv", "sync", "--inexact"])
+        self.assertEqual(args[3], {"GIT_OAUTH_TOKEN": "secret-token"})
+
+    def test_environment_is_forwarded_to_requirements_install(self):
+        """requirements.txt can reference private git URLs just as pyproject.toml can."""
+        repo_path = self._repository("requirements.txt")
+
+        with mock.patch("package_installer.SubprocessRunner.run") as run:
+            PackageInstaller.install_packages_for_repository(repo_path, {"GIT_OAUTH_TOKEN": "secret-token"})
+
+        self.assertEqual(run.call_args.args[3], {"GIT_OAUTH_TOKEN": "secret-token"})
+
+    def test_installation_without_credentials_still_works(self):
+        """Configurations that need no credentials must keep inheriting the process environment."""
+        repo_path = self._repository("pyproject.toml", "uv.lock")
+
+        with mock.patch("package_installer.SubprocessRunner.run") as run:
+            PackageInstaller.install_packages_for_repository(repo_path)
+
+        self.assertIsNone(run.call_args.args[3])
 
 
 if __name__ == "__main__":
