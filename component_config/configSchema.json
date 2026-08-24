@@ -111,6 +111,56 @@
       "required": [
         "auth"
       ],
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "auth": {
+                "enum": [
+                  "none",
+                  "pat",
+                  "ssh"
+                ]
+              }
+            },
+            "required": [
+              "auth"
+            ]
+          },
+          "then": {
+            "required": [
+              "url"
+            ],
+            "properties": {
+              "url": {
+                "minLength": 1
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "auth": {
+                "const": "oauth"
+              }
+            },
+            "required": [
+              "auth"
+            ]
+          },
+          "then": {
+            "required": [
+              "repository"
+            ],
+            "properties": {
+              "repository": {
+                "minLength": 1
+              }
+            }
+          }
+        }
+      ],
       "properties": {
         "url": {
           "type": "string",
