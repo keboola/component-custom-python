@@ -408,7 +408,7 @@ class TestListRepositoriesAction(unittest.TestCase):
             self._component(authorized=False, auth="pat").get_oauth_repositories()
 
         message = str(context.exception)
-        self.assertIn("only available with GitHub authorization", message)
+        self.assertIn("Supported only for OAuth", message)
         self.assertNotIn("authorize the component", message)
 
     def test_unauthorized_configuration_is_reported(self):
