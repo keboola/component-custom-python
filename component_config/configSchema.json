@@ -112,6 +112,65 @@
         "auth",
         "url"
       ],
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "auth": {
+                "const": "oauth"
+              }
+            },
+            "required": [
+              "auth"
+            ]
+          },
+          "then": {
+            "properties": {
+              "url": {
+                "pattern": "^https://(www\\.)?github\\.com/.+"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "auth": {
+                "const": "pat"
+              }
+            },
+            "required": [
+              "auth"
+            ]
+          },
+          "then": {
+            "properties": {
+              "url": {
+                "pattern": "^https://.+"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "auth": {
+                "const": "ssh"
+              }
+            },
+            "required": [
+              "auth"
+            ]
+          },
+          "then": {
+            "properties": {
+              "url": {
+                "pattern": "^(git@|ssh://).+"
+              }
+            }
+          }
+        }
+      ],
       "properties": {
         "auth": {
           "type": "string",
