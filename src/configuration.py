@@ -43,17 +43,11 @@ class SSHKeysConfiguration:
 @dataclass
 class GitConfiguration:
     url: str = ""
-    url_oauth: str = ""
     branch: str = "main"
     filename: str = "main.py"
     auth: AuthEnum = AuthEnum.NONE
     encrypted_token: str | None = None
     ssh_keys: SSHKeysConfiguration = field(default_factory=SSHKeysConfiguration)
-
-    @property
-    def repository_url(self) -> str:
-        """Repository to clone. OAuth configurations select it from a list instead of typing in a URL."""
-        return self.url_oauth if self.auth == AuthEnum.OAUTH else self.url
 
 
 @dataclass

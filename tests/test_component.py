@@ -157,19 +157,15 @@ class TestOAuthAuthentication(unittest.TestCase):
 
     @staticmethod
     def _git_cfg(url: str = "https://github.com/keboola/example.git") -> GitConfiguration:
-        return GitConfiguration(url_oauth=url, auth=AuthEnum.OAUTH)
+        return GitConfiguration(url=url, auth=AuthEnum.OAUTH)
 
-    def test_missing_repository_asks_for_a_selection(self):
-        """The repository is picked from a dropdown here, so asking for a URL would be confusing."""
-        with self.assertRaises(UserException) as context:
-            GitHandler(GitConfiguration(auth=AuthEnum.OAUTH), "secret-token")
-        self.assertIn("select a repository", str(context.exception))
-
-    def test_missing_url_still_asks_for_a_url(self):
-        """The wording for the other authentication methods is unchanged."""
-        with self.assertRaises(UserException) as context:
-            GitHandler(GitConfiguration(auth=AuthEnum.PAT))
-        self.assertIn("URL is required", str(context.exception))
+    def test_missing_url_is_reported(self):
+        """One field for every authentication method means one message."""
+        for auth in (AuthEnum.OAUTH, AuthEnum.PAT):
+            with self.subTest(auth=auth):
+                with self.assertRaises(UserException) as context:
+                    GitHandler(GitConfiguration(auth=auth), "secret-token")
+                self.assertIn("URL is required", str(context.exception))
 
     def test_missing_token_raises_user_exception(self):
         """An unauthorized configuration must fail with an actionable message, not with a git error."""
@@ -411,19 +407,6 @@ class TestListRepositoriesAction(unittest.TestCase):
 
         self.assertIn("No repositories are available", str(context.exception))
 
-
-class TestRepositoryUrlResolution(unittest.TestCase):
-    """OAuth configurations carry the repository in "url_oauth", the other methods in "url"."""
-
-    def test_oauth_uses_the_selected_repository(self):
-        cfg = GitConfiguration(url="https://github.com/acme/typed.git", auth=AuthEnum.OAUTH,
-                               url_oauth="https://github.com/acme/picked.git")
-        self.assertEqual(cfg.repository_url, "https://github.com/acme/picked.git")
-
-    def test_other_methods_use_the_typed_url(self):
-        cfg = GitConfiguration(url="https://github.com/acme/typed.git", auth=AuthEnum.PAT,
-                               url_oauth="https://github.com/acme/picked.git")
-        self.assertEqual(cfg.repository_url, "https://github.com/acme/typed.git")
 
 
 class TestDependencyInstallationCredentials(unittest.TestCase):

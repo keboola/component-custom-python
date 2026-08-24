@@ -109,73 +109,10 @@
         }
       },
       "required": [
-        "auth"
-      ],
-      "allOf": [
-        {
-          "if": {
-            "properties": {
-              "auth": {
-                "enum": [
-                  "none",
-                  "pat",
-                  "ssh"
-                ]
-              }
-            },
-            "required": [
-              "auth"
-            ]
-          },
-          "then": {
-            "required": [
-              "url"
-            ],
-            "properties": {
-              "url": {
-                "minLength": 1
-              }
-            }
-          }
-        },
-        {
-          "if": {
-            "properties": {
-              "auth": {
-                "const": "oauth"
-              }
-            },
-            "required": [
-              "auth"
-            ]
-          },
-          "then": {
-            "required": [
-              "url_oauth"
-            ],
-            "properties": {
-              "url_oauth": {
-                "minLength": 1
-              }
-            }
-          }
-        }
+        "auth",
+        "url"
       ],
       "properties": {
-        "url": {
-          "type": "string",
-          "title": "Repository URL",
-          "propertyOrder": 70,
-          "options": {
-            "dependencies": {
-              "auth": [
-                "none",
-                "pat",
-                "ssh"
-              ]
-            }
-          }
-        },
         "auth": {
           "type": "string",
           "format": "radio",
@@ -219,17 +156,16 @@
             }
           }
         },
-        "url_oauth": {
+        "url": {
           "type": "string",
           "enum": [],
           "format": "select",
           "title": "Repository URL",
+          "minLength": 1,
           "propertyOrder": 105,
           "options": {
-            "dependencies": {
-              "auth": "oauth"
-            },
-            "tooltip": "Only repositories included in the Keboola GitHub App installation are listed. To make more of them available, change the repository selection of the installation on GitHub.",
+            "creatable": true,
+            "tooltip": "Type or paste the clone URL. With GitHub authorization you can also load the repositories the Keboola GitHub App is allowed to read; to make more of them available, change the repository selection of the installation on GitHub.",
             "async": {
               "label": "List Repositories",
               "action": "listRepositories",
@@ -248,8 +184,7 @@
               "label": "List Branches",
               "action": "listBranches",
               "autoload": [
-                "git.url",
-                "git.url_oauth"
+                "git.url"
               ],
               "cache": false
             }

@@ -81,10 +81,8 @@ configured and executed directly in Keboola. This eliminates the need to build a
 
 The git configuration object supports the following parameters:
 
-- `url`: Repository URL – supports both HTTPS and SSH formats (all `auth` methods except `oauth`).
-- `url_oauth`: Clone URL of the repository, picked from a list of what the GitHub App may read
-  (`"auth": "oauth"` only). Replaces `url` for OAuth configurations, which is why it carries the same
-  `url` prefix.
+- `url`: Repository URL – supports both HTTPS and SSH formats. Type or paste it, or with `"auth": "oauth"`
+  load the repositories the GitHub App may read and pick one from the list.
 - `branch`: Branch name to checkout – UI provides branch selection.
 - `filename`: Python script filename to execute – UI lists available files.
 - `auth`: Repository visibility & authentication method.
@@ -121,11 +119,11 @@ Setting this up takes three steps, **in this order**. Only the first one happens
    (`https://github.com/apps/keboola-custom-python/installations/new`) and choose which repositories it may read.
    Repository selection happens here and nowhere else.
 2. **Authorize** the component in the **Authorization** section of the configuration in Keboola.
-3. Pick the repository from the **Repository** dropdown, which lists what the installation makes available.
+3. Pick the repository in **Repository URL** – **List Repositories** loads what the installation makes available.
 
 Installing and authorizing are independent. Authorizing does not install the app, and the authorization
 screen offers no repository selection at all – so if you authorize without installing first, you receive a
-valid token that can see no repositories and the **Repository** dropdown reports that none are available. To
+valid token that can see no repositories and **List Repositories** reports that none are available. To
 change which repositories are available later, reconfigure the installation on GitHub; re-authorizing in
 Keboola will not change it.
 
