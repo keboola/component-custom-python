@@ -173,7 +173,7 @@
           "type": "string",
           "enum": [],
           "format": "select",
-          "title": "Repository",
+          "title": "Repository URL",
           "propertyOrder": 105,
           "options": {
             "dependencies": {

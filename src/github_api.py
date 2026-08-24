@@ -64,6 +64,10 @@ class GitHubApi:
             raise UserException(self._explain_http_error(err.code, err.reason)) from err
         except urllib.error.URLError as err:
             raise UserException(f"Could not reach the GitHub API: {err.reason}") from err
+        except OSError as err:
+            # a read timeout arrives as a bare TimeoutError: an OSError, but not a URLError, and
+            # with no "reason" attribute to report
+            raise UserException(f"Could not reach the GitHub API: {err}") from err
 
     @staticmethod
     def _explain_http_error(code: int, reason: str) -> str:

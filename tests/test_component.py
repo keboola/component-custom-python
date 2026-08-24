@@ -341,6 +341,22 @@ class TestGitHubApi(unittest.TestCase):
         self.assertEqual(headers["authorization"], "Bearer secret-token")
         self.assertIn("user-agent", headers)
 
+    def test_read_timeout_is_reported_as_a_user_error(self):
+        """A read timeout arrives as a bare TimeoutError, which is not a URLError and would otherwise
+        escape both handlers and end the job as an internal error."""
+        with mock.patch("github_api.urllib.request.urlopen", side_effect=TimeoutError("timed out")):
+            with self.assertRaises(UserException) as context:
+                GitHubApi("secret-token").list_installation_repositories()
+
+        self.assertIn("Could not reach the GitHub API", str(context.exception))
+
+    def test_connection_failure_keeps_reporting_its_reason(self):
+        with mock.patch("github_api.urllib.request.urlopen", side_effect=urllib.error.URLError("no such host")):
+            with self.assertRaises(UserException) as context:
+                GitHubApi("secret-token").list_installation_repositories()
+
+        self.assertIn("no such host", str(context.exception))
+
     def test_revoked_authorization_is_explained(self):
         """A revoked authorization must tell the user to re-authorize, not show a bare HTTP 401."""
         error = urllib.error.HTTPError("https://api.github.com/user/installations", 401, "Unauthorized", {}, None)

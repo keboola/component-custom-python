@@ -114,7 +114,7 @@ The Keboola GitHub App has the client ID `Iv23liWeMeCpr1xBOVsj`. You can review 
 revoke it, at
 [github.com/settings/connections/applications/Iv23liWeMeCpr1xBOVsj](https://github.com/settings/connections/applications/Iv23liWeMeCpr1xBOVsj).
 
-Setting this up takes two separate steps on GitHub, **in this order**:
+Setting this up takes three steps, **in this order**. Only the first one happens on GitHub:
 
 1. **Install** the app on your account or organisation
    (`https://github.com/apps/keboola-custom-python/installations/new`) and choose which repositories it may read.
