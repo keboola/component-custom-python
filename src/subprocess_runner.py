@@ -63,6 +63,7 @@ class SubprocessRunner:
         args: list[str],
         ok_message: str = "Command finished successfully.",
         err_message: str = "Command failed.",
+        env: dict[str, str] | None = None,
     ):
         logging.debug("Running command: %s", " ".join(args))
         process = subprocess.Popen(
@@ -70,6 +71,7 @@ class SubprocessRunner:
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             text=True,
+            env=env,
         )
 
         stderr_output: deque[str] = deque(maxlen=MAX_STDERR_LINES)

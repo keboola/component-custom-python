@@ -15,6 +15,7 @@ from keboola.component.base import ComponentBase, sync_action
 from keboola.component.exceptions import UserException
 
 from configuration import AuthEnum, Configuration, SourceEnum, VenvEnum, encrypted_keys
+from github_api import GitHubApi
 from package_installer import PackageInstaller
 from source_file import FileHandler
 from source_git import GitHandler
@@ -64,13 +65,29 @@ class Component(ComponentBase):
                 f"in the configuration. Detail: {err}"
             ) from err
 
+        self.oauth_token = self._get_oauth_token()
+
+    def _get_oauth_token(self) -> str | None:
+        """Access token issued by the OAuth broker, delivered outside "parameters" in the authorization
+        section. Returns None for configurations that do not use OAuth."""
+        try:
+            credentials = self.configuration.oauth_credentials
+        except json.JSONDecodeError as err:
+            # unreadable broker credentials are a configuration problem, not an internal one
+            raise UserException(
+                "The stored GitHub authorization could not be read. Please authorize the component again "
+                "in the Authorization section of the configuration."
+            ) from err
+
+        return credentials.data.get("access_token") if credentials else None
+
     def run(self):
         if self.parameters.source == SourceEnum.CODE:
             base_path = Path(self.data_folder_path)
             script_filename = FileHandler.prepare_script_file(self.data_folder_path, self.parameters.code)
         else:
             base_path = Path(GitHandler.REPO_PATH).absolute()
-            git_handler = GitHandler(self.parameters.git)
+            git_handler = GitHandler(self.parameters.git, self.oauth_token)
             script_filename = git_handler.clone_repository()
 
         if self.parameters.venv == VenvEnum.BASE:
@@ -87,7 +104,7 @@ class Component(ComponentBase):
                 self.parameters.packages.insert(0, "keboola.component")
             PackageInstaller.install_packages(self.parameters.packages)
         else:
-            PackageInstaller.install_packages_for_repository(base_path)
+            PackageInstaller.install_packages_for_repository(base_path, git_handler.subprocess_env())
 
         self._merge_user_parameters()
 
@@ -147,10 +164,41 @@ class Component(ComponentBase):
         # remove code
         config_data = self.configuration.config_data.copy()
 
+        # the authorization section carries the decrypted OAuth access token and the shared application
+        # secret, neither of which may reach the executed user script
+        config_data.pop("authorization", None)
+
         # build config data and overwrite for the user script
         config_data["parameters"] = self.parameters.user_properties
         with open(Path(self.data_folder_path) / "config.json", "w+") as inp:
             json.dump(config_data, inp)
+
+    @sync_action("listRepositories")
+    def get_oauth_repositories(self):
+        """
+        Returns the repositories the Keboola GitHub App is allowed to read.
+        This method is used to populate the repository dropdown in the UI.
+        """
+        if self.parameters.git.auth != AuthEnum.OAUTH:
+            # the button belongs to the shared repository field, so every authentication method is
+            # offered it even though only GitHub authorization can answer it
+            raise UserException("Supported only for OAuth. Please insert the URL manually.")
+
+        if not self.oauth_token:
+            raise UserException(
+                "GitHub authorization is missing. Please authorize the component in the Authorization "
+                "section of the configuration."
+            )
+
+        repositories = GitHubApi(self.oauth_token).list_installation_repositories()
+        if not repositories:
+            # authorizing does not install the app, so this is the expected state after authorizing alone
+            raise UserException(
+                "No repositories are available to the Keboola GitHub App. Install the app on the account "
+                "owning the repository and include that repository in the app's repository selection."
+            )
+
+        return repositories
 
     @sync_action("listBranches")
     def get_repository_branches(self):
@@ -158,7 +206,7 @@ class Component(ComponentBase):
         Returns a list of branches in the git repository.
         This method is used to populate the branches dropdown in the UI.
         """
-        git_handler = GitHandler(self.parameters.git)
+        git_handler = GitHandler(self.parameters.git, self.oauth_token)
         return git_handler.get_repository_branches()
 
     @sync_action("listFiles")
@@ -167,7 +215,7 @@ class Component(ComponentBase):
         Returns a list of branches in the git repository.
         This method is used to populate the branches dropdown in the UI.
         """
-        git_handler = GitHandler(self.parameters.git)
+        git_handler = GitHandler(self.parameters.git, self.oauth_token)
         return git_handler.get_repository_files()
 
 

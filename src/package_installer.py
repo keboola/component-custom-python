@@ -17,7 +17,7 @@ class PackageInstaller:
             SubprocessRunner.run(args, MSG_OK, MSG_ERR)
 
     @staticmethod
-    def install_packages_for_repository(repository_path: Path):
+    def install_packages_for_repository(repository_path: Path, env: dict[str, str] | None = None):
         """
         Install packages based on the given repository path.
         - If there is a pyproject.toml and a uv.lock file, run uv sync.
@@ -25,6 +25,8 @@ class PackageInstaller:
 
         Args:
             repository_path (str): Path to the repository containing requirements.txt.
+            env: Environment for the installation. Carries the git credentials, without which
+                private git dependencies cannot be fetched.
         """
         pyproject_file = repository_path / "pyproject.toml"
         uv_lock_file = repository_path / "uv.lock"
@@ -46,4 +48,4 @@ class PackageInstaller:
             logging.info("No dependencies file found")
             return
 
-        SubprocessRunner.run(args, MSG_OK, MSG_ERR)
+        SubprocessRunner.run(args, MSG_OK, MSG_ERR, env)

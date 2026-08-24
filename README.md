@@ -5,6 +5,8 @@
   - [Configuration](#configuration)
     - [Git configuration](#git-configuration)
     - [SSH configuration](#ssh-configuration)
+    - [GitHub OAuth configuration](#github-oauth-configuration)
+      - [Choose "Only select repositories"](#choose-only-select-repositories)
     - [Example: Running code saved in custom repository + template 🧩](#example-running-code-saved-in-custom-repository--template-)
     - [Example: Listing preinstalled packages](#example-listing-preinstalled-packages)
     - [Example: Accessing custom configuration parameters](#example-accessing-custom-configuration-parameters)
@@ -79,13 +81,16 @@ configured and executed directly in Keboola. This eliminates the need to build a
 
 The git configuration object supports the following parameters:
 
-- `url`: Repository URL – supports both HTTPS and SSH formats.
+- `url`: Repository URL – supports both HTTPS and SSH formats. Type or paste it, or with `"auth": "oauth"`
+  load the repositories the GitHub App may read and pick one from the list.
 - `branch`: Branch name to checkout – UI provides branch selection.
 - `filename`: Python script filename to execute – UI lists available files.
 - `auth`: Repository visibility & authentication method.
   - `none`: Public repository, no authentication (default).
   - `pat`: Private repository, Personal Access Token.
   - `ssh`: Private repository, SSH key.
+  - `oauth`: Private GitHub repository authorized via the **Authorization** section of the configuration.
+    Requires the Keboola GitHub App to be installed first – see [GitHub OAuth configuration](#github-oauth-configuration).
 - `#token`: Personal Access Token (`"auth": "pat"` only). This value will be encrypted in Keboola Storage.
   The same token also authenticates private git dependencies declared in `[tool.uv.sources]` in your `pyproject.toml`,
   so there is no need to embed tokens directly in the source file.
@@ -97,6 +102,58 @@ The git configuration object supports the following parameters:
 - `keys`: Object containing both public and private keys.
   - `public`: Public key saved in your Git project. This value is not passed by the component and is saved just for future reference.
   - `#private`: Private key used for authentication. This value will be encrypted in Keboola Storage.
+
+
+### GitHub OAuth configuration
+
+With `"auth": "oauth"` no credential is entered into the configuration at all – the access token is issued by
+the Keboola OAuth broker. Only `https://github.com` URLs are supported.
+
+The Keboola GitHub App has the client ID `Iv23liWeMeCpr1xBOVsj`. You can review the access you granted it, and
+revoke it, at
+[github.com/settings/connections/applications/Iv23liWeMeCpr1xBOVsj](https://github.com/settings/connections/applications/Iv23liWeMeCpr1xBOVsj).
+
+Setting this up takes three steps, **in this order**. Only the first one happens on GitHub:
+
+1. **Install** the app on your account or organisation
+   (`https://github.com/apps/keboola-custom-python/installations/new`) and choose which repositories it may read.
+   Repository selection happens here and nowhere else.
+2. **Authorize** the component in the **Authorization** section of the configuration in Keboola.
+3. Pick the repository in **Repository URL** – **List Repositories** loads what the installation makes available.
+
+Installing and authorizing are independent. Authorizing does not install the app, and the authorization
+screen offers no repository selection at all – so if you authorize without installing first, you receive a
+valid token that can see no repositories and **List Repositories** reports that none are available. To
+change which repositories are available later, reconfigure the installation on GitHub; re-authorizing in
+Keboola will not change it.
+
+Some organisations require an owner to approve the installation before it takes effect.
+
+
+#### Choose "Only select repositories"
+
+The installation dialog offers **All repositories** or **Only select repositories**. Choose the second one and
+list only the repositories this component needs.
+
+That dialog is the only place where the reach of the access token is decided, and narrowing it is the entire
+reason to use OAuth rather than a personal access token. **All repositories** grants `Contents: Read-only`
+across every repository in the account or organisation, including ones created later, and the token that
+results does not expire – which is the same over-scoped, long-lived credential that a personal access token
+was criticised for. Keboola cannot narrow this from its side; only the installation can.
+
+On a large organisation, **All repositories** also makes the **Repository** dropdown slow to load or unable to
+load at all. A narrow selection avoids that.
+
+The token is always the intersection of what the app may read and what you can read yourself, so it never
+reaches anything you could not already reach. The app requests `Contents: Read-only` and `Metadata:
+Read-only`, and nothing else.
+
+Private git dependencies declared in `[tool.uv.sources]` authenticate with the same token and need no
+credentials of their own. The repositories they live in have to be part of the installation's repository
+selection as well, not just the repository holding the code.
+
+To change the selection later, reconfigure the installation on GitHub. Re-authorizing in Keboola does not
+change it.
 
 
 ### Example: Running code saved in custom repository + template 🧩

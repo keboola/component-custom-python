@@ -109,15 +109,10 @@
         }
       },
       "required": [
-        "url",
-        "auth"
+        "auth",
+        "url"
       ],
       "properties": {
-        "url": {
-          "type": "string",
-          "title": "Repository URL",
-          "propertyOrder": 70
-        },
         "auth": {
           "type": "string",
           "format": "radio",
@@ -126,13 +121,16 @@
           "enum": [
             "none",
             "pat",
-            "ssh"
+            "ssh",
+            "oauth"
           ],
           "options": {
+            "tooltip": "The **GitHub (OAuth)** option is authorized in the **Authorization** section of this configuration. The repositories the component may read are selected on GitHub when the Keboola GitHub App is installed.",
             "enum_titles": [
               "Public – None",
               "Private – Personal Access Token",
-              "Private – SSH Key"
+              "Private – SSH Key",
+              "Private – GitHub (OAuth)"
             ]
           },
           "default": "none"
@@ -155,6 +153,23 @@
             "only_keys": true,
             "dependencies": {
               "auth": "ssh"
+            }
+          }
+        },
+        "url": {
+          "type": "string",
+          "enum": [],
+          "format": "select",
+          "title": "Repository URL",
+          "minLength": 1,
+          "propertyOrder": 105,
+          "options": {
+            "creatable": true,
+            "tooltip": "Type or paste the clone URL. With GitHub authorization you can also load the repositories the Keboola GitHub App is allowed to read; to make more of them available, change the repository selection of the installation on GitHub.",
+            "async": {
+              "label": "List Repositories",
+              "action": "listRepositories",
+              "cache": false
             }
           }
         },
