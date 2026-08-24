@@ -380,11 +380,19 @@ class TestGitHubApi(unittest.TestCase):
 class TestListRepositoriesAction(unittest.TestCase):
     """The dropdown is where a missing app installation shows up before a job is ever run."""
 
-    def _component(self, authorized: bool) -> Component:
+    def _component(self, authorized: bool, auth: str = "oauth") -> Component:
         datadir = tempfile.TemporaryDirectory()
         self.addCleanup(datadir.cleanup)
         # "run" keeps the sync_action decorator from swallowing exceptions into exit(1)
-        config_data = {"action": "run", "parameters": {"source": "git", "venv": "base", "user_properties": {}}}
+        config_data = {
+            "action": "run",
+            "parameters": {
+                "source": "git",
+                "venv": "base",
+                "user_properties": {},
+                "git": {"auth": auth, "url": "https://github.com/keboola/example.git"},
+            },
+        }
         if authorized:
             credentials = {"id": "main", "#data": '{"access_token": "secret-token"}'}
             config_data["authorization"] = {"oauth_api": {"credentials": credentials}}
@@ -392,6 +400,16 @@ class TestListRepositoriesAction(unittest.TestCase):
 
         with mock.patch.dict(os.environ, {"KBC_DATADIR": datadir.name}):
             return Component()
+
+    def test_other_auth_methods_get_a_relevant_message(self):
+        """The button cannot be hidden for them, so pressing it must not send them chasing an
+        authorization problem they do not have."""
+        with self.assertRaises(UserException) as context:
+            self._component(authorized=False, auth="pat").get_oauth_repositories()
+
+        message = str(context.exception)
+        self.assertIn("only available with GitHub authorization", message)
+        self.assertNotIn("authorize the component", message)
 
     def test_unauthorized_configuration_is_reported(self):
         with self.assertRaises(UserException) as context:

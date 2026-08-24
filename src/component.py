@@ -179,6 +179,14 @@ class Component(ComponentBase):
         Returns the repositories the Keboola GitHub App is allowed to read.
         This method is used to populate the repository dropdown in the UI.
         """
+        if self.parameters.git.auth != AuthEnum.OAUTH:
+            # the button belongs to the shared repository field, so every authentication method is
+            # offered it even though only GitHub authorization can answer it
+            raise UserException(
+                "Listing repositories is only available with GitHub authorization. With a personal access "
+                "token or an SSH key, enter the repository URL directly."
+            )
+
         if not self.oauth_token:
             raise UserException(
                 "GitHub authorization is missing. Please authorize the component in the Authorization "
