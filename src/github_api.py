@@ -30,7 +30,11 @@ class GitHubApi:
         for installation in self._get_all("/user/installations", "installations"):
             path = f"/user/installations/{installation['id']}/repositories"
             for repository in self._get_all(path, "repositories"):
-                options.append({"value": repository["clone_url"], "label": repository["full_name"]})
+                # value and label are deliberately the same string: the options are only loaded when
+                # the user runs the action, so a saved configuration reopened without running it again
+                # would show the bare value under a label the form cannot resolve
+                clone_url = repository["clone_url"]
+                options.append({"value": clone_url, "label": clone_url})
 
         return options
 

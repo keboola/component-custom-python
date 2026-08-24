@@ -43,7 +43,7 @@ class SSHKeysConfiguration:
 @dataclass
 class GitConfiguration:
     url: str = ""
-    repository: str = ""
+    url_oauth: str = ""
     branch: str = "main"
     filename: str = "main.py"
     auth: AuthEnum = AuthEnum.NONE
@@ -53,7 +53,7 @@ class GitConfiguration:
     @property
     def repository_url(self) -> str:
         """Repository to clone. OAuth configurations select it from a list instead of typing in a URL."""
-        return self.repository if self.auth == AuthEnum.OAUTH else self.url
+        return self.url_oauth if self.auth == AuthEnum.OAUTH else self.url
 
 
 @dataclass

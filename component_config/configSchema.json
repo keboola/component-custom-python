@@ -151,10 +151,10 @@
           },
           "then": {
             "required": [
-              "repository"
+              "url_oauth"
             ],
             "properties": {
-              "repository": {
+              "url_oauth": {
                 "minLength": 1
               }
             }
@@ -219,7 +219,7 @@
             }
           }
         },
-        "repository": {
+        "url_oauth": {
           "type": "string",
           "enum": [],
           "format": "select",
@@ -249,7 +249,7 @@
               "action": "listBranches",
               "autoload": [
                 "git.url",
-                "git.repository"
+                "git.url_oauth"
               ],
               "cache": false
             }

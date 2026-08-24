@@ -82,8 +82,9 @@ configured and executed directly in Keboola. This eliminates the need to build a
 The git configuration object supports the following parameters:
 
 - `url`: Repository URL – supports both HTTPS and SSH formats (all `auth` methods except `oauth`).
-- `repository`: Clone URL of the repository, picked from a list of what the GitHub App may read
-  (`"auth": "oauth"` only). Replaces `url` for OAuth configurations.
+- `url_oauth`: Clone URL of the repository, picked from a list of what the GitHub App may read
+  (`"auth": "oauth"` only). Replaces `url` for OAuth configurations, which is why it carries the same
+  `url` prefix.
 - `branch`: Branch name to checkout – UI provides branch selection.
 - `filename`: Python script filename to execute – UI lists available files.
 - `auth`: Repository visibility & authentication method.

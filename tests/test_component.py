@@ -157,7 +157,7 @@ class TestOAuthAuthentication(unittest.TestCase):
 
     @staticmethod
     def _git_cfg(url: str = "https://github.com/keboola/example.git") -> GitConfiguration:
-        return GitConfiguration(repository=url, auth=AuthEnum.OAUTH)
+        return GitConfiguration(url_oauth=url, auth=AuthEnum.OAUTH)
 
     def test_missing_repository_asks_for_a_selection(self):
         """The repository is picked from a dropdown here, so asking for a URL would be confusing."""
@@ -314,10 +314,24 @@ class TestGitHubApi(unittest.TestCase):
         self.assertEqual(
             options,
             [
-                {"value": "https://gh/first.git", "label": "acme/first"},
-                {"value": "https://gh/second.git", "label": "acme/second"},
+                {"value": "https://gh/first.git", "label": "https://gh/first.git"},
+                {"value": "https://gh/second.git", "label": "https://gh/second.git"},
             ],
         )
+
+    def test_value_and_label_are_identical(self):
+        """The options are only loaded on demand, so a label the form cannot resolve on reopen would
+        leave the user looking at the bare value instead of what they picked."""
+        responses = [
+            api_response({"total_count": 1, "installations": [{"id": 1}]}),
+            api_response(
+                {"total_count": 1, "repositories": [{"full_name": "acme/first", "clone_url": "https://gh/first.git"}]}
+            ),
+        ]
+        with mock.patch("github_api.urllib.request.urlopen", side_effect=responses):
+            options = GitHubApi("secret-token").list_installation_repositories()
+
+        self.assertEqual(options, [{"value": "https://gh/first.git", "label": "https://gh/first.git"}])
 
     def test_paginated_results_are_collected(self):
         first_page = [{"full_name": f"acme/repo-{i}", "clone_url": f"https://gh/repo-{i}.git"} for i in range(100)]
@@ -330,7 +344,7 @@ class TestGitHubApi(unittest.TestCase):
             options = GitHubApi("secret-token").list_installation_repositories()
 
         self.assertEqual(len(options), 101)
-        self.assertEqual(options[-1]["label"], "acme/last")
+        self.assertEqual(options[-1]["label"], "https://gh/l")
 
     def test_request_is_authenticated(self):
         response = api_response({"total_count": 0, "installations": []})
@@ -399,16 +413,16 @@ class TestListRepositoriesAction(unittest.TestCase):
 
 
 class TestRepositoryUrlResolution(unittest.TestCase):
-    """OAuth configurations carry the repository in "repository", the other methods in "url"."""
+    """OAuth configurations carry the repository in "url_oauth", the other methods in "url"."""
 
     def test_oauth_uses_the_selected_repository(self):
         cfg = GitConfiguration(url="https://github.com/acme/typed.git", auth=AuthEnum.OAUTH,
-                               repository="https://github.com/acme/picked.git")
+                               url_oauth="https://github.com/acme/picked.git")
         self.assertEqual(cfg.repository_url, "https://github.com/acme/picked.git")
 
     def test_other_methods_use_the_typed_url(self):
         cfg = GitConfiguration(url="https://github.com/acme/typed.git", auth=AuthEnum.PAT,
-                               repository="https://github.com/acme/picked.git")
+                               url_oauth="https://github.com/acme/picked.git")
         self.assertEqual(cfg.repository_url, "https://github.com/acme/typed.git")
 
 
