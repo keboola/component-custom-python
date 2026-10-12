@@ -13,6 +13,7 @@ from keboola.component.exceptions import UserException
 from configuration import AuthEnum, GitConfiguration
 
 GITHUB_APP_TOKEN_ENV = "GIT_GITHUB_APP_TOKEN"
+GITHUB_APP_HINT = ". Check that the GitHub App is installed for this repository."
 # git asks for the username first, then the password; GitHub expects the installation token
 # as the password of the "x-access-token" user
 GITHUB_APP_ASKPASS_SCRIPT = f"""#!/bin/sh
@@ -176,10 +177,10 @@ class GitHandler:
 
             if process.returncode != 0:
                 error_msg = stderr.decode() if stderr else "Unknown git clone error"
-                if "Permission denied" in error_msg or "publickey" in error_msg:
-                    error_msg += ". Please check SSH key configuration or use HTTPS URL."
                 if self.github_app_token:
-                    error_msg = error_msg.rstrip() + ". Check that the GitHub App is installed for this repository."
+                    error_msg = error_msg.rstrip().rstrip(".") + GITHUB_APP_HINT
+                elif "Permission denied" in error_msg or "publickey" in error_msg:
+                    error_msg += ". Please check SSH key configuration or use HTTPS URL."
                 raise UserException(f"Failed to clone git repository: {error_msg}")
 
             logging.info("Successfully cloned repository")
@@ -223,7 +224,7 @@ class GitHandler:
             if process.returncode != 0:
                 error_msg = stderr.decode()
                 if self.github_app_token:
-                    error_msg = error_msg.rstrip() + ". Check that the GitHub App is installed for this repository."
+                    error_msg = error_msg.rstrip().rstrip(".") + GITHUB_APP_HINT
                 raise UserException(f"Failed to get branches: {error_msg}")
 
             branches = [line.strip().split("refs/heads/")[-1] for line in stdout.decode().splitlines() if line.strip()]

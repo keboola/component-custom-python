@@ -97,6 +97,14 @@ class TestGitHubAppAskpass(unittest.TestCase):
         self.assertNotIn("\n.", str(context.exception))
         self.assertFalse(os.path.exists(popen.call_args.kwargs["env"]["GIT_ASKPASS"]))
 
+    def test_failed_clone_has_only_the_github_app_hint(self):
+        popen = _popen_mock(returncode=128, stderr=b"fatal: could not create work tree dir 'repo_clone': Permission denied\n")
+        with mock.patch("source_git.subprocess.Popen", popen), self.assertRaises(UserException) as context:
+            self.handler.clone_repository(sync_action=True)
+
+        self.assertIn("Permission denied. Check that the GitHub App is installed", str(context.exception))
+        self.assertNotIn("SSH key", str(context.exception))
+
     def test_list_branches_uses_askpass(self):
         popen = _popen_mock(stdout=b"abc123\trefs/heads/main\ndef456\trefs/heads/dev\n")
         with mock.patch("source_git.subprocess.Popen", popen):
@@ -130,6 +138,19 @@ class TestPatAuthUnchanged(unittest.TestCase):
             ["git", "clone", "--branch", "main", "https://x-token-auth:pat@example.ghe.com/org/repo.git", "repo_clone"],
         )
         self.assertIs(popen.call_args.kwargs["env"], handler.env)
+
+
+    def test_ssh_hint_is_unchanged_without_github_app(self):
+        handler = GitHandler(GitConfiguration(url=REPO_URL, auth=AuthEnum.NONE))
+        popen = _popen_mock(returncode=128, stderr=b"git@host: Permission denied (publickey).\n")
+        with mock.patch("source_git.subprocess.Popen", popen), self.assertRaises(UserException) as context:
+            handler.clone_repository(sync_action=True)
+
+        self.assertEqual(
+            str(context.exception),
+            "Error processing git repository: Failed to clone git repository: "
+            "git@host: Permission denied (publickey).\n. Please check SSH key configuration or use HTTPS URL.",
+        )
 
 
 class TestComponentGitHubAppToken(unittest.TestCase):
