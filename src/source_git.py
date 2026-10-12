@@ -13,7 +13,9 @@ from keboola.component.exceptions import UserException
 from configuration import AuthEnum, GitConfiguration
 
 GITHUB_APP_TOKEN_ENV = "GIT_GITHUB_APP_TOKEN"
-GITHUB_APP_HINT = ". Check that the GitHub App is installed for this repository."
+GITHUB_APP_HINT = (
+    ". Check that the GitHub App is installed for this repository and that the installation is not suspended."
+)
 # git asks for the username first, then the password; GitHub expects the installation token
 # as the password of the "x-access-token" user
 GITHUB_APP_ASKPASS_SCRIPT = f"""#!/bin/sh

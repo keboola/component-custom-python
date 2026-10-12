@@ -1,8 +1,11 @@
+import io
 import json
+import logging
 import os
 import subprocess
 import tempfile
 import unittest
+from contextlib import redirect_stdout
 
 import mock
 from keboola.component.exceptions import UserException
@@ -66,7 +69,7 @@ class TestGitHubAppAskpass(unittest.TestCase):
                 return subprocess.run([askpass, prompt], env=env, capture_output=True, text=True).stdout.strip()
 
             self.assertEqual(ask(f"Username for '{REPO_URL}': "), "x-access-token")
-            self.assertEqual(ask(f"Password for 'https://x-access-token@example.ghe.com': "), TOKEN)
+            self.assertEqual(ask("Password for 'https://x-access-token@example.ghe.com': "), TOKEN)
         self.assertFalse(os.path.exists(askpass))
 
     def test_token_is_not_in_the_handler_environment(self):
@@ -98,7 +101,8 @@ class TestGitHubAppAskpass(unittest.TestCase):
         self.assertFalse(os.path.exists(popen.call_args.kwargs["env"]["GIT_ASKPASS"]))
 
     def test_failed_clone_has_only_the_github_app_hint(self):
-        popen = _popen_mock(returncode=128, stderr=b"fatal: could not create work tree dir 'repo_clone': Permission denied\n")
+        stderr = b"fatal: could not create work tree dir 'repo_clone': Permission denied\n"
+        popen = _popen_mock(returncode=128, stderr=stderr)
         with mock.patch("source_git.subprocess.Popen", popen), self.assertRaises(UserException) as context:
             self.handler.clone_repository(sync_action=True)
 
@@ -125,7 +129,7 @@ class TestGitHubAppAskpass(unittest.TestCase):
         self.assertFalse(os.path.exists(popen.call_args.kwargs["env"]["GIT_ASKPASS"]))
 
 
-class TestPatAuthUnchanged(unittest.TestCase):
+class TestExistingAuthUnchanged(unittest.TestCase):
     def test_pat_clone_arguments_are_unchanged(self):
         with mock.patch.object(GitHandler, "_set_up_netrc"):
             handler = GitHandler(GitConfiguration(url=REPO_URL, auth=AuthEnum.PAT, encrypted_token="pat"))
@@ -138,7 +142,6 @@ class TestPatAuthUnchanged(unittest.TestCase):
             ["git", "clone", "--branch", "main", "https://x-token-auth:pat@example.ghe.com/org/repo.git", "repo_clone"],
         )
         self.assertIs(popen.call_args.kwargs["env"], handler.env)
-
 
     def test_ssh_hint_is_unchanged_without_github_app(self):
         handler = GitHandler(GitConfiguration(url=REPO_URL, auth=AuthEnum.NONE))
@@ -255,6 +258,33 @@ class TestComponentGitHubAppToken(unittest.TestCase):
             component.run()
 
         self.assertEqual(config_during_install["authorization"], {})
+
+    def _run_sync_action(self, action: str, popen: mock.MagicMock) -> str:
+        component, _ = self._build_component(
+            {"parameters": self.PARAMETERS, "action": action, "authorization": {"githubApp": {"#token": TOKEN}}}
+        )
+        root_level = logging.getLogger().level
+        self.addCleanup(logging.getLogger().setLevel, root_level)
+        stdout = io.StringIO()
+        with mock.patch("source_git.subprocess.Popen", popen), redirect_stdout(stdout):
+            component.execute_action()
+        return stdout.getvalue()
+
+    def test_list_branches_sync_action_uses_the_token(self):
+        popen = _popen_mock(stdout=b"abc123\trefs/heads/main\n")
+        output = self._run_sync_action("listBranches", popen)
+
+        self.assertEqual(json.loads(output), [{"value": "main", "label": "main"}])
+        self.assertEqual(popen.call_args.kwargs["env"][GITHUB_APP_TOKEN_ENV], TOKEN)
+        self.assertNotIn(TOKEN, output)
+
+    def test_list_files_sync_action_uses_the_token(self):
+        popen = _popen_mock()
+        output = self._run_sync_action("listFiles", popen)
+
+        self.assertEqual(json.loads(output), [])
+        self.assertEqual(popen.call_args.args[0][:4], ["git", "-c", "credential.helper=", "clone"])
+        self.assertEqual(popen.call_args.kwargs["env"][GITHUB_APP_TOKEN_ENV], TOKEN)
 
     def test_config_file_without_github_app_is_not_rewritten(self):
         component, datadir = self._build_component(
