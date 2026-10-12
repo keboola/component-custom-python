@@ -179,7 +179,7 @@ class GitHandler:
                 if "Permission denied" in error_msg or "publickey" in error_msg:
                     error_msg += ". Please check SSH key configuration or use HTTPS URL."
                 if self.github_app_token:
-                    error_msg += ". Check that the GitHub App is installed for this repository."
+                    error_msg = error_msg.rstrip() + ". Check that the GitHub App is installed for this repository."
                 raise UserException(f"Failed to clone git repository: {error_msg}")
 
             logging.info("Successfully cloned repository")
@@ -223,7 +223,7 @@ class GitHandler:
             if process.returncode != 0:
                 error_msg = stderr.decode()
                 if self.github_app_token:
-                    error_msg += ". Check that the GitHub App is installed for this repository."
+                    error_msg = error_msg.rstrip() + ". Check that the GitHub App is installed for this repository."
                 raise UserException(f"Failed to get branches: {error_msg}")
 
             branches = [line.strip().split("refs/heads/")[-1] for line in stdout.decode().splitlines() if line.strip()]

@@ -88,12 +88,13 @@ class TestGitHubAppAskpass(unittest.TestCase):
         self.assertFalse(os.path.exists(env["GIT_ASKPASS"]))
 
     def test_failed_clone_adds_hint_and_removes_askpass(self):
-        popen = _popen_mock(returncode=128, stderr=b"remote: Repository not found.\nfatal: repository not found")
+        popen = _popen_mock(returncode=128, stderr=b"remote: Repository not found.\nfatal: repository not found\n")
         with mock.patch("source_git.subprocess.Popen", popen), self.assertRaises(UserException) as context:
             self.handler.clone_repository(sync_action=True)
 
         self.assertIn("Check that the GitHub App is installed for this repository", str(context.exception))
         self.assertNotIn(TOKEN, str(context.exception))
+        self.assertNotIn("\n.", str(context.exception))
         self.assertFalse(os.path.exists(popen.call_args.kwargs["env"]["GIT_ASKPASS"]))
 
     def test_list_branches_uses_askpass(self):
@@ -107,11 +108,12 @@ class TestGitHubAppAskpass(unittest.TestCase):
         self.assertEqual(popen.call_args.kwargs["env"][GITHUB_APP_TOKEN_ENV], TOKEN)
 
     def test_failed_list_branches_adds_hint(self):
-        popen = _popen_mock(returncode=128, stderr=b"remote: Repository not found.")
+        popen = _popen_mock(returncode=128, stderr=b"remote: Repository not found.\n")
         with mock.patch("source_git.subprocess.Popen", popen), self.assertRaises(UserException) as context:
             self.handler.get_repository_branches()
 
         self.assertIn("Check that the GitHub App is installed for this repository", str(context.exception))
+        self.assertNotIn("\n.", str(context.exception))
         self.assertFalse(os.path.exists(popen.call_args.kwargs["env"]["GIT_ASKPASS"]))
 
 
@@ -141,7 +143,7 @@ class TestComponentGitHubAppToken(unittest.TestCase):
         datadir = tempfile.TemporaryDirectory()
         self.addCleanup(datadir.cleanup)
         with open(os.path.join(datadir.name, "config.json"), "w") as config_file:
-            json.dump(config, config_file)
+            json.dump(config, config_file, indent=4)
         with mock.patch.dict(os.environ, {"KBC_DATADIR": datadir.name}):
             return Component(), datadir.name
 
