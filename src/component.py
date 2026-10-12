@@ -72,6 +72,7 @@ class Component(ComponentBase):
             base_path = Path(GitHandler.REPO_PATH).absolute()
             git_handler = self._create_git_handler()
             script_filename = git_handler.clone_repository()
+            self._remove_github_app_token_from_config_file()
 
         if self.parameters.venv == VenvEnum.BASE:
             logging.info("Using base image environment")
@@ -102,6 +103,25 @@ class Component(ComponentBase):
         github_app = authorization.get("githubApp") if isinstance(authorization, dict) else None
         token = github_app.get("#token") if isinstance(github_app, dict) else None
         return token if isinstance(token, str) else None
+
+    @staticmethod
+    def _without_github_app_token(config_data: dict) -> dict:
+        authorization = config_data.get("authorization")
+        if not (isinstance(authorization, dict) and "githubApp" in authorization):
+            return config_data
+        return {**config_data, "authorization": {k: v for k, v in authorization.items() if k != "githubApp"}}
+
+    def _remove_github_app_token_from_config_file(self) -> None:
+        """
+        The token is only needed to clone the repository. Remove it from config.json before any code
+        from the repository runs (package installation, the user script).
+        """
+        config_data = self.configuration.config_data
+        stripped = self._without_github_app_token(config_data)
+        if stripped is config_data:
+            return
+        with open(Path(self.data_folder_path) / "config.json", "w") as config_file:
+            json.dump(stripped, config_file)
 
     def execute_script_file(self, file_path: Path):
         # Change current working directory so that relative paths work
@@ -155,15 +175,10 @@ class Component(ComponentBase):
 
         """
         # remove code
-        config_data = self.configuration.config_data.copy()
+        config_data = self._without_github_app_token(self.configuration.config_data).copy()
 
         # build config data and overwrite for the user script
         config_data["parameters"] = self.parameters.user_properties
-
-        # the GitHub App token is only needed to clone the repository, the user script must not see it
-        authorization = config_data.get("authorization")
-        if isinstance(authorization, dict) and "githubApp" in authorization:
-            config_data["authorization"] = {k: v for k, v in authorization.items() if k != "githubApp"}
         with open(Path(self.data_folder_path) / "config.json", "w+") as inp:
             json.dump(config_data, inp)
 

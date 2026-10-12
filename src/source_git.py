@@ -72,7 +72,7 @@ class GitHandler:
             )
 
         parsed = urlparse(self.git_cfg.url)
-        if parsed.scheme != "https" or parsed.username or parsed.password:
+        if parsed.scheme != "https" or "@" in parsed.netloc:
             raise UserException("GitHub App authentication is only supported for HTTPS URLs without credentials")
 
         self.github_app_token = token
@@ -221,7 +221,10 @@ class GitHandler:
                 stdout, stderr = process.communicate()
 
             if process.returncode != 0:
-                raise UserException(f"Failed to get branches: {stderr.decode()}")
+                error_msg = stderr.decode()
+                if self.github_app_token:
+                    error_msg += ". Check that the GitHub App is installed for this repository."
+                raise UserException(f"Failed to get branches: {error_msg}")
 
             branches = [line.strip().split("refs/heads/")[-1] for line in stdout.decode().splitlines() if line.strip()]
             return [{"value": b, "label": b} for b in branches]

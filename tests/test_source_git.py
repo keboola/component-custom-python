@@ -36,9 +36,11 @@ class TestGitHubAppAuthSetUp(unittest.TestCase):
             self.assertIn("only supported for HTTPS URLs without credentials", str(context.exception))
 
     def test_url_with_credentials_raises_user_exception(self):
-        with self.assertRaises(UserException) as context:
-            GitHandler(GitConfiguration(url="https://user:pass@example.ghe.com/org/repo.git", auth=AuthEnum.GITHUB_APP), TOKEN)
-        self.assertIn("only supported for HTTPS URLs without credentials", str(context.exception))
+        for userinfo in ("user:pass@", "user@", "@", ":@"):
+            url = f"https://{userinfo}example.ghe.com/org/repo.git"
+            with self.subTest(url=url), self.assertRaises(UserException) as context:
+                GitHandler(GitConfiguration(url=url, auth=AuthEnum.GITHUB_APP), TOKEN)
+            self.assertIn("only supported for HTTPS URLs without credentials", str(context.exception))
 
     def test_token_is_ignored_for_other_auth_methods(self):
         handler = GitHandler(GitConfiguration(url=REPO_URL, auth=AuthEnum.NONE), TOKEN)
@@ -103,6 +105,14 @@ class TestGitHubAppAskpass(unittest.TestCase):
         args = popen.call_args.args[0]
         self.assertEqual(args, ["git", "-c", "credential.helper=", "ls-remote", "--heads", REPO_URL])
         self.assertEqual(popen.call_args.kwargs["env"][GITHUB_APP_TOKEN_ENV], TOKEN)
+
+    def test_failed_list_branches_adds_hint(self):
+        popen = _popen_mock(returncode=128, stderr=b"remote: Repository not found.")
+        with mock.patch("source_git.subprocess.Popen", popen), self.assertRaises(UserException) as context:
+            self.handler.get_repository_branches()
+
+        self.assertIn("Check that the GitHub App is installed for this repository", str(context.exception))
+        self.assertFalse(os.path.exists(popen.call_args.kwargs["env"]["GIT_ASKPASS"]))
 
 
 class TestPatAuthUnchanged(unittest.TestCase):
@@ -178,6 +188,42 @@ class TestComponentGitHubAppToken(unittest.TestCase):
         with open(os.path.join(datadir, "config.json")) as config_file:
             written = json.load(config_file)
         self.assertEqual(written["authorization"], {"workspace": {"host": "h"}})
+
+    def test_token_is_removed_from_config_file_before_packages_are_installed(self):
+        component, datadir = self._build_component(
+            {
+                "parameters": self.PARAMETERS,
+                "authorization": {"githubApp": {"#token": TOKEN}, "workspace": {"host": "h"}},
+            }
+        )
+        config_during_install = {}
+
+        def read_config(_):
+            with open(os.path.join(datadir, "config.json")) as config_file:
+                config_during_install.update(json.load(config_file))
+
+        with (
+            mock.patch("component.GitHandler.clone_repository", return_value="main.py"),
+            mock.patch("component.PackageInstaller.install_packages_for_repository", side_effect=read_config),
+            mock.patch.object(Component, "execute_script_file"),
+        ):
+            component.run()
+
+        self.assertEqual(config_during_install["authorization"], {"workspace": {"host": "h"}})
+        self.assertEqual(config_during_install["parameters"], self.PARAMETERS)
+
+    def test_config_file_without_github_app_is_not_rewritten(self):
+        component, datadir = self._build_component(
+            {"parameters": self.PARAMETERS, "authorization": {"workspace": {"host": "h"}}}
+        )
+        config_path = os.path.join(datadir, "config.json")
+        with open(config_path) as config_file:
+            original = config_file.read()
+
+        component._remove_github_app_token_from_config_file()
+
+        with open(config_path) as config_file:
+            self.assertEqual(config_file.read(), original)
 
 
 if __name__ == "__main__":
