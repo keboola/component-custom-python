@@ -63,8 +63,12 @@ class Component(ComponentBase):
                 f'Invalid component configuration: please check the "{err.field_path}" parameter '
                 f"in the configuration. Detail: {err}"
             ) from err
+        # read before run() removes the token from config.json, which self.configuration re-reads on every access
+        self.github_app_token = self._get_github_app_token()
 
     def run(self):
+        self._remove_github_app_token_from_config_file()
+
         if self.parameters.source == SourceEnum.CODE:
             base_path = Path(self.data_folder_path)
             script_filename = FileHandler.prepare_script_file(self.data_folder_path, self.parameters.code)
@@ -72,7 +76,6 @@ class Component(ComponentBase):
             base_path = Path(GitHandler.REPO_PATH).absolute()
             git_handler = self._create_git_handler()
             script_filename = git_handler.clone_repository()
-            self._remove_github_app_token_from_config_file()
 
         if self.parameters.venv == VenvEnum.BASE:
             logging.info("Using base image environment")
@@ -95,7 +98,7 @@ class Component(ComponentBase):
         self.execute_script_file(script_filename)
 
     def _create_git_handler(self) -> GitHandler:
-        return GitHandler(self.parameters.git, self._get_github_app_token())
+        return GitHandler(self.parameters.git, self.github_app_token)
 
     def _get_github_app_token(self) -> str | None:
         """The platform injects the GitHub App installation token into authorization.githubApp.#token."""
@@ -113,8 +116,8 @@ class Component(ComponentBase):
 
     def _remove_github_app_token_from_config_file(self) -> None:
         """
-        The token is only needed to clone the repository. Remove it from config.json before any code
-        from the repository runs (package installation, the user script).
+        The token is only needed to clone the repository and was already read in __init__. Remove it from
+        config.json before any other code runs (package installation, the user script).
         """
         config_data = self.configuration.config_data
         stripped = self._without_github_app_token(config_data)

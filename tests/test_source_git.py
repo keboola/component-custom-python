@@ -212,6 +212,27 @@ class TestComponentGitHubAppToken(unittest.TestCase):
         self.assertEqual(config_during_install["authorization"], {"workspace": {"host": "h"}})
         self.assertEqual(config_during_install["parameters"], self.PARAMETERS)
 
+    def test_token_is_removed_from_config_file_for_code_source(self):
+        component, datadir = self._build_component(
+            {
+                "parameters": {**self.PARAMETERS, "source": "code", "code": "print(1)", "packages": ["pandas"]},
+                "authorization": {"githubApp": {"#token": TOKEN}},
+            }
+        )
+        config_during_install = {}
+
+        def read_config(_):
+            with open(os.path.join(datadir, "config.json")) as config_file:
+                config_during_install.update(json.load(config_file))
+
+        with (
+            mock.patch("component.PackageInstaller.install_packages", side_effect=read_config),
+            mock.patch.object(Component, "execute_script_file"),
+        ):
+            component.run()
+
+        self.assertEqual(config_during_install["authorization"], {})
+
     def test_config_file_without_github_app_is_not_rewritten(self):
         component, datadir = self._build_component(
             {"parameters": self.PARAMETERS, "authorization": {"workspace": {"host": "h"}}}
