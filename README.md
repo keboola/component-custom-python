@@ -86,6 +86,10 @@ The git configuration object supports the following parameters:
   - `none`: Public repository, no authentication (default).
   - `pat`: Private repository, Personal Access Token.
   - `ssh`: Private repository, SSH key.
+  - `githubApp`: Private repository, GitHub App. Your organization's GitHub App must be connected to Keboola and
+    installed for the repository. Keboola then injects a short-lived, read-only token for the repository into the job;
+    no credentials are stored in the configuration. Requires an `https://` URL without credentials. The token is not
+    used to install private git dependencies.
 - `#token`: Personal Access Token (`"auth": "pat"` only). This value will be encrypted in Keboola Storage.
   The same token also authenticates private git dependencies declared in `[tool.uv.sources]` in your `pyproject.toml`,
   so there is no need to embed tokens directly in the source file.

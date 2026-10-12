@@ -70,7 +70,7 @@ class Component(ComponentBase):
             script_filename = FileHandler.prepare_script_file(self.data_folder_path, self.parameters.code)
         else:
             base_path = Path(GitHandler.REPO_PATH).absolute()
-            git_handler = GitHandler(self.parameters.git)
+            git_handler = self._create_git_handler()
             script_filename = git_handler.clone_repository()
 
         if self.parameters.venv == VenvEnum.BASE:
@@ -92,6 +92,16 @@ class Component(ComponentBase):
         self._merge_user_parameters()
 
         self.execute_script_file(script_filename)
+
+    def _create_git_handler(self) -> GitHandler:
+        return GitHandler(self.parameters.git, self._get_github_app_token())
+
+    def _get_github_app_token(self) -> str | None:
+        """The platform injects the GitHub App installation token into authorization.githubApp.#token."""
+        authorization = self.configuration.config_data.get("authorization")
+        github_app = authorization.get("githubApp") if isinstance(authorization, dict) else None
+        token = github_app.get("#token") if isinstance(github_app, dict) else None
+        return token if isinstance(token, str) else None
 
     def execute_script_file(self, file_path: Path):
         # Change current working directory so that relative paths work
@@ -149,6 +159,11 @@ class Component(ComponentBase):
 
         # build config data and overwrite for the user script
         config_data["parameters"] = self.parameters.user_properties
+
+        # the GitHub App token is only needed to clone the repository, the user script must not see it
+        authorization = config_data.get("authorization")
+        if isinstance(authorization, dict) and "githubApp" in authorization:
+            config_data["authorization"] = {k: v for k, v in authorization.items() if k != "githubApp"}
         with open(Path(self.data_folder_path) / "config.json", "w+") as inp:
             json.dump(config_data, inp)
 
@@ -158,7 +173,7 @@ class Component(ComponentBase):
         Returns a list of branches in the git repository.
         This method is used to populate the branches dropdown in the UI.
         """
-        git_handler = GitHandler(self.parameters.git)
+        git_handler = self._create_git_handler()
         return git_handler.get_repository_branches()
 
     @sync_action("listFiles")
@@ -167,7 +182,7 @@ class Component(ComponentBase):
         Returns a list of branches in the git repository.
         This method is used to populate the branches dropdown in the UI.
         """
-        git_handler = GitHandler(self.parameters.git)
+        git_handler = self._create_git_handler()
         return git_handler.get_repository_files()
 
 

@@ -2,6 +2,9 @@ import logging
 import os
 import subprocess
 import sys
+import tempfile
+from collections.abc import Iterator
+from contextlib import contextmanager
 from pathlib import Path
 from urllib.parse import urlparse
 
@@ -9,23 +12,36 @@ from keboola.component.exceptions import UserException
 
 from configuration import AuthEnum, GitConfiguration
 
+GITHUB_APP_TOKEN_ENV = "GIT_GITHUB_APP_TOKEN"
+# git asks for the username first, then the password; GitHub expects the installation token
+# as the password of the "x-access-token" user
+GITHUB_APP_ASKPASS_SCRIPT = f"""#!/bin/sh
+case "$1" in
+    Username*) echo "x-access-token" ;;
+    *) echo "${GITHUB_APP_TOKEN_ENV}" ;;
+esac
+"""
+
 
 class GitHandler:
     REPO_PATH = "repo_clone"
 
-    def __init__(self, git_cfg: GitConfiguration):
+    def __init__(self, git_cfg: GitConfiguration, github_app_token: str | None = None):
         # add path for absolute imports to start at the cloned repository root level
         sys.path.append(str(Path(__file__).parent.parent / GitHandler.REPO_PATH))
 
         self.env = os.environ.copy()
         self.git_cfg = git_cfg
         self.repo_auth_url = None  # ‼️ NEVER EVER INCLUDE THIS VARIABLE IN LOGGING OUTPUT ‼️
+        self.github_app_token = None  # ‼️ NEVER EVER INCLUDE THIS VARIABLE IN LOGGING OUTPUT ‼️
 
         if not self.git_cfg.url:
             raise UserException("Git repository URL is required")
 
         if self.git_cfg.auth == AuthEnum.PAT:
             self._set_up_token_auth()
+        elif self.git_cfg.auth == AuthEnum.GITHUB_APP:
+            self._set_up_github_app_auth(github_app_token)
 
         repo_url = self.git_cfg.url
         if repo_url.startswith("git@") or repo_url.startswith("ssh://"):
@@ -46,6 +62,46 @@ class GitHandler:
         )
         self._set_up_netrc(self.git_cfg.url, self.git_cfg.encrypted_token)
         logging.info("Git token authentication set up for HTTPS URL.")
+
+    def _set_up_github_app_auth(self, token: str | None) -> None:
+        if not token:
+            raise UserException(
+                "GitHub App credentials are missing in the job configuration. "
+                "Check that your organization's GitHub App is connected to Keboola "
+                "and installed for this repository."
+            )
+
+        parsed = urlparse(self.git_cfg.url)
+        if parsed.scheme != "https" or parsed.username or parsed.password:
+            raise UserException("GitHub App authentication is only supported for HTTPS URLs without credentials")
+
+        self.github_app_token = token
+        logging.info("Git GitHub App authentication set up for HTTPS URL.")
+
+    def _git_command(self, *args: str) -> list[str]:
+        if self.github_app_token:
+            # ignore any configured credential helper so that only the askpass script provides the token
+            return ["git", "-c", "credential.helper=", *args]
+        return ["git", *args]
+
+    @contextmanager
+    def _git_env(self) -> Iterator[dict[str, str]]:
+        """
+        Yield the environment for a git subprocess. With GitHub App authentication, the token reaches git
+        only through this environment and a temporary GIT_ASKPASS script, which is removed afterwards.
+        """
+        if not self.github_app_token:
+            yield self.env
+            return
+
+        fd, askpass_path = tempfile.mkstemp(prefix="git-askpass-", suffix=".sh")
+        try:
+            with os.fdopen(fd, "w") as f:
+                f.write(GITHUB_APP_ASKPASS_SCRIPT)
+            os.chmod(askpass_path, 0o700)
+            yield {**self.env, "GIT_ASKPASS": askpass_path, GITHUB_APP_TOKEN_ENV: self.github_app_token}
+        finally:
+            os.remove(askpass_path)
 
     @staticmethod
     def _set_up_netrc(repo_url: str, token: str) -> None:
@@ -102,25 +158,28 @@ class GitHandler:
         logging.info("Cloning git repository: %s", self.git_cfg.url)
 
         try:
-            clone_args = ["git", "clone"]
+            clone_args = self._git_command("clone")
 
             if branch:
                 clone_args.extend(["--branch", branch])
 
             clone_args.extend([self.repo_auth_url or self.git_cfg.url, GitHandler.REPO_PATH])
 
-            process = subprocess.Popen(
-                clone_args,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                env=self.env,
-            )
-            _, stderr = process.communicate()
+            with self._git_env() as env:
+                process = subprocess.Popen(
+                    clone_args,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    env=env,
+                )
+                _, stderr = process.communicate()
 
             if process.returncode != 0:
                 error_msg = stderr.decode() if stderr else "Unknown git clone error"
                 if "Permission denied" in error_msg or "publickey" in error_msg:
                     error_msg += ". Please check SSH key configuration or use HTTPS URL."
+                if self.github_app_token:
+                    error_msg += ". Check that the GitHub App is installed for this repository."
                 raise UserException(f"Failed to clone git repository: {error_msg}")
 
             logging.info("Successfully cloned repository")
@@ -148,17 +207,18 @@ class GitHandler:
             List of branch names
         """
         try:
-            branches_args = ["git", "ls-remote", "--heads"]
+            branches_args = self._git_command("ls-remote", "--heads")
 
             branches_args.append(self.repo_auth_url or self.git_cfg.url)
 
-            process = subprocess.Popen(
-                branches_args,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                env=self.env,
-            )
-            stdout, stderr = process.communicate()
+            with self._git_env() as env:
+                process = subprocess.Popen(
+                    branches_args,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    env=env,
+                )
+                stdout, stderr = process.communicate()
 
             if process.returncode != 0:
                 raise UserException(f"Failed to get branches: {stderr.decode()}")
