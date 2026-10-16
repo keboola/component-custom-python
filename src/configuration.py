@@ -25,6 +25,7 @@ class AuthEnum(Enum):
     NONE = "none"
     PAT = "pat"
     SSH = "ssh"
+    GITHUB_APP = "githubApp"
 
 
 # the ssh_keys.keys.[#private,public] structure is based on Keboola's standard SSH keys UI element output structure

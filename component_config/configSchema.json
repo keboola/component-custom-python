@@ -126,16 +126,30 @@
           "enum": [
             "none",
             "pat",
-            "ssh"
+            "ssh",
+            "githubApp"
           ],
           "options": {
             "enum_titles": [
               "Public – None",
               "Private – Personal Access Token",
-              "Private – SSH Key"
+              "Private – SSH Key",
+              "Private – GitHub App"
             ]
           },
           "default": "none"
+        },
+        "github_app_note": {
+          "type": "string",
+          "format": "info",
+          "title": "GitHub App authentication",
+          "description": "This option requires your organization's GitHub App to be connected to Keboola and installed for the repository. The repository URL must be an https:// URL without credentials.",
+          "propertyOrder": 85,
+          "options": {
+            "dependencies": {
+              "auth": "githubApp"
+            }
+          }
         },
         "#token": {
           "type": "string",

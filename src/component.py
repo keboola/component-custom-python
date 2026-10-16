@@ -63,14 +63,18 @@ class Component(ComponentBase):
                 f'Invalid component configuration: please check the "{err.field_path}" parameter '
                 f"in the configuration. Detail: {err}"
             ) from err
+        # read before run() removes the token from config.json, which self.configuration re-reads on every access
+        self.github_app_token = self._get_github_app_token()
 
     def run(self):
+        self._remove_github_app_token_from_config_file()
+
         if self.parameters.source == SourceEnum.CODE:
             base_path = Path(self.data_folder_path)
             script_filename = FileHandler.prepare_script_file(self.data_folder_path, self.parameters.code)
         else:
             base_path = Path(GitHandler.REPO_PATH).absolute()
-            git_handler = GitHandler(self.parameters.git)
+            git_handler = self._create_git_handler()
             script_filename = git_handler.clone_repository()
 
         if self.parameters.venv == VenvEnum.BASE:
@@ -92,6 +96,35 @@ class Component(ComponentBase):
         self._merge_user_parameters()
 
         self.execute_script_file(script_filename)
+
+    def _create_git_handler(self) -> GitHandler:
+        return GitHandler(self.parameters.git, self.github_app_token)
+
+    def _get_github_app_token(self) -> str | None:
+        """The platform injects the GitHub App installation token into authorization.githubApp.#token."""
+        authorization = self.configuration.config_data.get("authorization")
+        github_app = authorization.get("githubApp") if isinstance(authorization, dict) else None
+        token = github_app.get("#token") if isinstance(github_app, dict) else None
+        return token if isinstance(token, str) else None
+
+    @staticmethod
+    def _without_github_app_token(config_data: dict) -> dict:
+        authorization = config_data.get("authorization")
+        if not (isinstance(authorization, dict) and "githubApp" in authorization):
+            return config_data
+        return {**config_data, "authorization": {k: v for k, v in authorization.items() if k != "githubApp"}}
+
+    def _remove_github_app_token_from_config_file(self) -> None:
+        """
+        The token is only needed to clone the repository and was already read in __init__. Remove it from
+        config.json before any other code runs (package installation, the user script).
+        """
+        config_data = self.configuration.config_data
+        stripped = self._without_github_app_token(config_data)
+        if stripped is config_data:
+            return
+        with open(Path(self.data_folder_path) / "config.json", "w") as config_file:
+            json.dump(stripped, config_file)
 
     def execute_script_file(self, file_path: Path):
         # Change current working directory so that relative paths work
@@ -145,7 +178,7 @@ class Component(ComponentBase):
 
         """
         # remove code
-        config_data = self.configuration.config_data.copy()
+        config_data = self._without_github_app_token(self.configuration.config_data).copy()
 
         # build config data and overwrite for the user script
         config_data["parameters"] = self.parameters.user_properties
@@ -158,7 +191,7 @@ class Component(ComponentBase):
         Returns a list of branches in the git repository.
         This method is used to populate the branches dropdown in the UI.
         """
-        git_handler = GitHandler(self.parameters.git)
+        git_handler = self._create_git_handler()
         return git_handler.get_repository_branches()
 
     @sync_action("listFiles")
@@ -167,7 +200,7 @@ class Component(ComponentBase):
         Returns a list of branches in the git repository.
         This method is used to populate the branches dropdown in the UI.
         """
-        git_handler = GitHandler(self.parameters.git)
+        git_handler = self._create_git_handler()
         return git_handler.get_repository_files()
 
 
