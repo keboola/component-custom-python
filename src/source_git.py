@@ -43,7 +43,7 @@ class GitHandler:
 
         if self.git_cfg.auth == AuthEnum.PAT:
             self._set_up_token_auth()
-        elif self.git_cfg.auth == AuthEnum.GITHUB_APP:
+        elif self.git_cfg.uses_organization_auth:
             self._set_up_github_app_auth(github_app_token)
 
         repo_url = self.git_cfg.url

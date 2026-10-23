@@ -4,8 +4,13 @@ from enum import Enum
 from keboola.component.exceptions import UserException
 
 
+# configuration keys that are not valid Python names
+CONFIG_KEYS = {"auth_type": "authType"}
+
+
 # the encrypted keys (prefixed with # in Keboola) have to be prefixed with "encrypted_" here
-def encrypted_keys(key: str) -> str:
+def config_keys(key: str) -> str:
+    key = CONFIG_KEYS.get(key, key)
     return key.replace("encrypted_", "#") if key.startswith("encrypted_") else key
 
 
@@ -25,7 +30,9 @@ class AuthEnum(Enum):
     NONE = "none"
     PAT = "pat"
     SSH = "ssh"
-    GITHUB_APP = "githubApp"
+
+
+AUTH_TYPE_ORGANIZATION = "organization"
 
 
 # the ssh_keys.keys.[#private,public] structure is based on Keboola's standard SSH keys UI element output structure
@@ -46,8 +53,23 @@ class GitConfiguration:
     branch: str = "main"
     filename: str = "main.py"
     auth: AuthEnum = AuthEnum.NONE
+    auth_type: str | None = None
     encrypted_token: str | None = None
     ssh_keys: SSHKeysConfiguration = field(default_factory=SSHKeysConfiguration)
+
+    def __post_init__(self):
+        if self.auth_type not in (None, "", AUTH_TYPE_ORGANIZATION):
+            raise UserException(
+                f'Invalid git authType "{self.auth_type}": only "{AUTH_TYPE_ORGANIZATION}" is supported'
+            )
+        if self.uses_organization_auth and self.auth != AuthEnum.NONE:
+            raise UserException(
+                f'Use either "authType: {AUTH_TYPE_ORGANIZATION}" or explicit credentials ("pat", "ssh"), not both'
+            )
+
+    @property
+    def uses_organization_auth(self) -> bool:
+        return self.auth_type == AUTH_TYPE_ORGANIZATION
 
 
 @dataclass
