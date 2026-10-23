@@ -11,7 +11,7 @@ import mock
 from keboola.component.exceptions import UserException
 
 from component import Component
-from configuration import AuthEnum, GitConfiguration
+from configuration import AUTH_TYPE_ORGANIZATION, AuthEnum, GitConfiguration
 from source_git import GITHUB_APP_TOKEN_ENV, GitHandler
 
 REPO_URL = "https://example.ghe.com/org/repo.git"
@@ -29,21 +29,41 @@ class TestGitHubAppAuthSetUp(unittest.TestCase):
     def test_missing_token_raises_user_exception(self):
         for token in (None, ""):
             with self.subTest(token=token), self.assertRaises(UserException) as context:
-                GitHandler(GitConfiguration(url=REPO_URL, auth=AuthEnum.GITHUB_APP), token)
+                GitHandler(GitConfiguration(url=REPO_URL, auth_type=AUTH_TYPE_ORGANIZATION), token)
             self.assertIn("GitHub App credentials are missing", str(context.exception))
 
     def test_non_https_url_raises_user_exception(self):
         for url in ("http://example.ghe.com/org/repo.git", "git@example.ghe.com:org/repo.git"):
             with self.subTest(url=url), self.assertRaises(UserException) as context:
-                GitHandler(GitConfiguration(url=url, auth=AuthEnum.GITHUB_APP), TOKEN)
+                GitHandler(GitConfiguration(url=url, auth_type=AUTH_TYPE_ORGANIZATION), TOKEN)
             self.assertIn("only supported for HTTPS URLs without credentials", str(context.exception))
 
     def test_url_with_credentials_raises_user_exception(self):
         for userinfo in ("user:pass@", "user@", "@", ":@"):
             url = f"https://{userinfo}example.ghe.com/org/repo.git"
             with self.subTest(url=url), self.assertRaises(UserException) as context:
-                GitHandler(GitConfiguration(url=url, auth=AuthEnum.GITHUB_APP), TOKEN)
+                GitHandler(GitConfiguration(url=url, auth_type=AUTH_TYPE_ORGANIZATION), TOKEN)
             self.assertIn("only supported for HTTPS URLs without credentials", str(context.exception))
+
+    def test_organization_auth_with_explicit_credentials_raises_user_exception(self):
+        for auth in (AuthEnum.PAT, AuthEnum.SSH):
+            with self.subTest(auth=auth), self.assertRaises(UserException) as context:
+                GitHandler(GitConfiguration(url=REPO_URL, auth=auth, auth_type=AUTH_TYPE_ORGANIZATION), TOKEN)
+            self.assertIn("not both", str(context.exception))
+
+    def test_unknown_auth_type_raises_user_exception(self):
+        with self.assertRaises(UserException) as context:
+            GitHandler(GitConfiguration(url=REPO_URL, auth_type="githubApp"), TOKEN)
+        self.assertIn('Invalid git authType "githubApp"', str(context.exception))
+
+    def test_auth_is_not_validated_when_git_is_not_used(self):
+        config = GitConfiguration(url=REPO_URL, auth=AuthEnum.PAT, auth_type=AUTH_TYPE_ORGANIZATION)
+        self.assertTrue(config.uses_organization_auth)
+
+    def test_empty_auth_type_is_not_organization_auth(self):
+        for auth_type in (None, ""):
+            with self.subTest(auth_type=auth_type):
+                self.assertFalse(GitConfiguration(url=REPO_URL, auth_type=auth_type).uses_organization_auth)
 
     def test_token_is_ignored_for_other_auth_methods(self):
         handler = GitHandler(GitConfiguration(url=REPO_URL, auth=AuthEnum.NONE), TOKEN)
@@ -56,7 +76,7 @@ class TestGitHubAppAuthSetUp(unittest.TestCase):
 
 class TestGitHubAppAskpass(unittest.TestCase):
     def setUp(self):
-        self.handler = GitHandler(GitConfiguration(url=REPO_URL, auth=AuthEnum.GITHUB_APP), TOKEN)
+        self.handler = GitHandler(GitConfiguration(url=REPO_URL, auth_type=AUTH_TYPE_ORGANIZATION), TOKEN)
 
     def test_askpass_answers_username_and_password(self):
         with self.handler._git_env() as env:
@@ -160,7 +180,7 @@ class TestComponentGitHubAppToken(unittest.TestCase):
     PARAMETERS = {
         "source": "git",
         "user_properties": {"key": "value"},
-        "git": {"url": REPO_URL, "auth": "githubApp"},
+        "git": {"url": REPO_URL, "authType": "organization"},
     }
 
     def _build_component(self, config: dict) -> tuple[Component, str]:
@@ -173,7 +193,8 @@ class TestComponentGitHubAppToken(unittest.TestCase):
 
     def test_github_app_auth_is_parsed(self):
         component, _ = self._build_component({"parameters": self.PARAMETERS})
-        self.assertEqual(component.parameters.git.auth, AuthEnum.GITHUB_APP)
+        self.assertEqual(component.parameters.git.auth, AuthEnum.NONE)
+        self.assertTrue(component.parameters.git.uses_organization_auth)
 
     def test_token_is_read_from_authorization(self):
         cases = {

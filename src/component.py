@@ -14,7 +14,7 @@ import dacite
 from keboola.component.base import ComponentBase, sync_action
 from keboola.component.exceptions import UserException
 
-from configuration import AuthEnum, Configuration, SourceEnum, VenvEnum, encrypted_keys
+from configuration import AuthEnum, Configuration, SourceEnum, VenvEnum, config_keys
 from package_installer import PackageInstaller
 from source_file import FileHandler
 from source_git import GitHandler
@@ -52,7 +52,7 @@ class Component(ComponentBase):
                 self.configuration.parameters,
                 config=dacite.Config(
                     cast=[AuthEnum, SourceEnum, VenvEnum],
-                    convert_key=encrypted_keys,
+                    convert_key=config_keys,
                 ),
             )
         except dacite.DaciteFieldError as err:
