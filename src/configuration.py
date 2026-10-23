@@ -4,7 +4,7 @@ from enum import Enum
 from keboola.component.exceptions import UserException
 
 
-# configuration keys that are not valid Python names
+# configuration keys that differ from the snake_case field names
 CONFIG_KEYS = {"auth_type": "authType"}
 
 
@@ -57,7 +57,7 @@ class GitConfiguration:
     encrypted_token: str | None = None
     ssh_keys: SSHKeysConfiguration = field(default_factory=SSHKeysConfiguration)
 
-    def __post_init__(self):
+    def validate_auth(self) -> None:
         if self.auth_type not in (None, "", AUTH_TYPE_ORGANIZATION):
             raise UserException(
                 f'Invalid git authType "{self.auth_type}": only "{AUTH_TYPE_ORGANIZATION}" is supported'

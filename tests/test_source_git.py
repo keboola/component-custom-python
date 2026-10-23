@@ -48,13 +48,17 @@ class TestGitHubAppAuthSetUp(unittest.TestCase):
     def test_organization_auth_with_explicit_credentials_raises_user_exception(self):
         for auth in (AuthEnum.PAT, AuthEnum.SSH):
             with self.subTest(auth=auth), self.assertRaises(UserException) as context:
-                GitConfiguration(url=REPO_URL, auth=auth, auth_type=AUTH_TYPE_ORGANIZATION)
+                GitHandler(GitConfiguration(url=REPO_URL, auth=auth, auth_type=AUTH_TYPE_ORGANIZATION), TOKEN)
             self.assertIn("not both", str(context.exception))
 
     def test_unknown_auth_type_raises_user_exception(self):
         with self.assertRaises(UserException) as context:
-            GitConfiguration(url=REPO_URL, auth_type="githubApp")
+            GitHandler(GitConfiguration(url=REPO_URL, auth_type="githubApp"), TOKEN)
         self.assertIn('Invalid git authType "githubApp"', str(context.exception))
+
+    def test_auth_is_not_validated_when_git_is_not_used(self):
+        config = GitConfiguration(url=REPO_URL, auth=AuthEnum.PAT, auth_type=AUTH_TYPE_ORGANIZATION)
+        self.assertTrue(config.uses_organization_auth)
 
     def test_empty_auth_type_is_not_organization_auth(self):
         for auth_type in (None, ""):

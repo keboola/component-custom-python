@@ -146,7 +146,7 @@
           ],
           "options": {
             "enum_titles": [
-              "Public – None",
+              "None (public repository or organization GitHub App)",
               "Private – Personal Access Token",
               "Private – SSH Key"
             ]
@@ -157,7 +157,7 @@
           "type": "string",
           "format": "info",
           "title": "GitHub App authentication",
-          "description": "Your organization's GitHub App must be connected to Keboola and installed for the repository. The repository URL must be an https:// URL without credentials. Set Repository Visibility & Authentication to \"Public – None\".",
+          "description": "Your organization's GitHub App must be connected to Keboola and installed for the repository. The repository URL must be an https:// URL without credentials. Set Repository Visibility & Authentication to \"None (public repository or organization GitHub App)\".",
           "propertyOrder": 77,
           "options": {
             "dependencies": {

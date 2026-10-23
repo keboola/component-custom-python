@@ -41,6 +41,8 @@ class GitHandler:
         if not self.git_cfg.url:
             raise UserException("Git repository URL is required")
 
+        self.git_cfg.validate_auth()
+
         if self.git_cfg.auth == AuthEnum.PAT:
             self._set_up_token_auth()
         elif self.git_cfg.uses_organization_auth:
